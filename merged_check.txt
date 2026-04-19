@@ -1,0 +1,39 @@
+[dotenv@17.2.3] injecting env (19) from .env -- tip: ≡ƒ¢á∩╕Å  run anywhere with `dotenvx run -- yourcommand`
+Found 1 users with phone 9876543210
+[
+  {
+    "ownerSettings": {
+      "autoConfirmBookings": false
+    },
+    "_id": "698c1afa493735be635d55e4",
+    "phone": "9876543210",
+    "name": "Amit Kumar",
+    "age": 35,
+    "gender": "male",
+    "email": "amit@email.com",
+    "role": "customer",
+    "language": "en",
+    "isVerified": true,
+    "isActive": true,
+    "createdAt": "2026-02-11T06:00:26.757Z",
+    "updatedAt": "2026-03-29T09:53:18.961Z",
+    "__v": 9,
+    "fcmTokens": [
+      "dzEpK2DwQTmUHLjASMcibw:APA91bHAEpnUVo_eNf4V2xPwEdQbzazEWfXn1fFPYUCnxzdFiw680K8BwQHMPvEq-6XV7EXfzJ5cj4-UaAtoYfsc6e6upsltVKHwCsrEGELaJt7P2bPHMHI",
+      "eW5no7FoSDihBTDfCd3qSc:APA91bHTPD1yBPmP8wHS06DrhDdSKLK-r7Hu0pBam3LVOYUkxKLxlo-uLOl_J7Upv-_IODsEZYL30MQylgQ9Ii6s3yiyhXHxZGUBcbyilwP_WmqktaBxhmU",
+      "cnhCb0s3QXyCD26FiZFPyr:APA91bEtEjVi9aXqjqY-j3aXg525WQegNCtHG0ITwTKxqIrTEjI8q14Eyq95EzDmUz8t92VCZ3g9-OyrI3MmT0P5YJzBqsq2EFcTucxyMAYE_neEhA7jTWI",
+      "fr2LjciYQKGB9Y43KjtnjZ:APA91bEsJZQ7dbyfUjDQsKPH7I32lBoe1-7LrJESJCpBiInkRNj1BgsOpWeYi7l3qChpTejkMWoDZLlPA2qF7z2TChrTPltd6YBkbhXdM_3ZuTsUXhHh-WY"
+    ],
+    "fcmToken": "fr2LjciYQKGB9Y43KjtnjZ:APA91bEsJZQ7dbyfUjDQsKPH7I32lBoe1-7LrJESJCpBiInkRNj1BgsOpWeYi7l3qChpTejkMWoDZLlPA2qF7z2TChrTPltd6YBkbhXdM_3ZuTsUXhHh-WY",
+    "permissions": {
+      "verify_ticket": true,
+      "update_location": true,
+      "manage_boarding": true,
+      "op_controls": false,
+      "view_manifest": true
+    },
+    "isServiceProvider": true,
+    "isFoodVendor": true,
+    "serviceType": "Driver"
+  }
+]

@@ -1,0 +1,44 @@
+[dotenv@17.2.3] injecting env (19) from .env -- tip: ≡ƒöæ add access controls to secrets: https://dotenvx.com/ops
+[
+  {
+    "location": {
+      "coordinates": [
+        72.8777,
+        19.076
+      ],
+      "type": "Point"
+    },
+    "availableHours": {
+      "startTime": "08:00",
+      "endTime": "22:00"
+    },
+    "_id": "69c8e4714f7420eb3b02f29a",
+    "userId": {
+      "_id": "698c1afa493735be635d55e4",
+      "phone": "9876543210",
+      "name": "Amit Kumar",
+      "email": "amit@email.com"
+    },
+    "name": "SFH",
+    "deliveryRadius": 5,
+    "avgDeliveryTime": 20,
+    "serviceAreas": [
+      {
+        "city": "Jabalpur",
+        "radiusKm": 5,
+        "_id": "69c8e4714f7420eb3b02f29b"
+      }
+    ],
+    "routes": [
+      {
+        "from": "Jabalpur",
+        "to": "Panagar",
+        "_id": "69c8e4714f7420eb3b02f29c"
+      }
+    ],
+    "isActive": true,
+    "createdAt": "2026-03-29T08:36:01.307Z",
+    "updatedAt": "2026-03-29T08:36:01.307Z",
+    "__v": 0
+  }
+]

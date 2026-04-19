@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "923994577628",
+    "project_id": "era-testing10",
+    "storage_bucket": "era-testing10.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:923994577628:android:a081a93ce48985acec7219",
+        "android_client_info": {
+          "package_name": "com.eratestingbot"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCckvrRMPZIvaZDuyrzQuu_OYYFOhA8R8w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

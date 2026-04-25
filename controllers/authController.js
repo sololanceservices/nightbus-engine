@@ -2,14 +2,16 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const { sendNotification } = require('../utils/notifications');
+const emailService = require('../utils/emailService');
 const otpStore = {}; // Simple in-memory OTP store
+const emailOtpStore = {}; // In-memory store for email OTPs
 
 // Generate JWT Token
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '30d' });
 };
 
-// Send OTP
+// Send Phone OTP
 exports.sendOTP = async (req, res) => {
   try {
     const { phone } = req.body;
@@ -21,13 +23,62 @@ exports.sendOTP = async (req, res) => {
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Store OTP (in production, use Redis or database)
+    // Store OTP
     otpStore[phone] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
 
-    // TODO: Send OTP via SMS (Twilio, AWS SNS, etc.)
-    console.log(`📱 OTP for ${phone}: ${otp}`);
+    // TODO: Send OTP via SMS
+    console.log(`📱 Phone OTP for ${phone}: ${otp}`);
 
     res.status(200).json({ success: true, message: 'OTP sent successfully', otp });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Send Email OTP
+exports.sendEmailOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Store OTP
+    emailOtpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
+
+    // Send via email service
+    await emailService.sendOTP(email, otp);
+
+    res.status(200).json({ success: true, message: 'OTP sent to email successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Verify Email OTP (Standalone verification for registration flow)
+exports.verifyEmailOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+    }
+
+    const storedOTP = emailOtpStore[email];
+    const isValid = storedOTP && storedOTP.otp === otp && storedOTP.expiresAt > Date.now();
+
+    if (!isValid) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+
+    // Mark as verified in store (used later during registration)
+    emailOtpStore[email].verified = true;
+
+    res.status(200).json({ success: true, message: 'Email verified successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -128,20 +179,38 @@ exports.verifyOTP = async (req, res) => {
 // Register
 exports.register = async (req, res) => {
   try {
-    const { phone, name, email, role = 'customer', fcmToken } = req.body;
+    const { phone, name, email, password, role = 'customer', fcmToken } = req.body;
 
-    if (!phone || !name) {
-      return res.status(400).json({ success: false, message: 'Phone and name are required' });
+    if (!phone || !name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'All fields (name, email, phone, password) are required' });
     }
 
-    let user = await User.findOne({ phone });
+    // Verify email was pre-verified with OTP
+    const storedEmailOTP = emailOtpStore[email];
+    if (!storedEmailOTP || !storedEmailOTP.verified) {
+      return res.status(400).json({ success: false, message: 'Email not verified. Please verify OTP first.' });
+    }
+
+    let user = await User.findOne({ $or: [{ phone }, { email }] });
     if (user) {
-      return res.status(400).json({ success: false, message: 'User already exists' });
+      return res.status(400).json({ success: false, message: 'User with this phone or email already exists' });
     }
 
-    user = new User({ phone, name, email, role, isVerified: true, fcmToken });
+    user = new User({ 
+      phone, 
+      name, 
+      email, 
+      password, 
+      role, 
+      isVerified: true, 
+      fcmToken 
+    });
+    
     if (fcmToken) user.fcmTokens = [fcmToken];
     await user.save();
+
+    // Cleanup store
+    delete emailOtpStore[email];
 
     const token = generateToken(user._id, user.role);
 
@@ -153,6 +222,7 @@ exports.register = async (req, res) => {
         id: user._id,
         name: user.name,
         phone: user.phone,
+        email: user.email,
         role: user.role,
         isServiceProvider: user.isServiceProvider,
         serviceType: user.serviceType,
@@ -164,28 +234,45 @@ exports.register = async (req, res) => {
   }
 };
 
-// Login (Password based for staff)
+// Login
 exports.login = async (req, res) => {
   try {
-    const { phone, password } = req.body;
+    const { email, password, otp } = req.body;
 
-    if (!phone || !password) {
-      return res.status(400).json({ success: false, message: 'Phone and password are required' });
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    const user = await User.findOne({ phone }).select('+password');
-    if (!user || user.role !== 'staff') {
-      return res.status(401).json({ success: false, message: 'Invalid credentials or not a staff member' });
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
     if (!user.isActive) {
       return res.status(403).json({ success: false, message: 'Account is deactivated' });
     }
 
-    const bcrypt = require('bcryptjs');
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    // Handle Password Login
+    if (password) {
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      }
+    } 
+    // Handle OTP Login
+    else if (otp) {
+      const storedOTP = emailOtpStore[email];
+      const isValid = storedOTP && storedOTP.otp === otp && storedOTP.expiresAt > Date.now();
+      
+      if (!isValid) {
+        return res.status(401).json({ success: false, message: 'Invalid or expired OTP' });
+      }
+      
+      // Cleanup
+      delete emailOtpStore[email];
+    } 
+    else {
+      return res.status(400).json({ success: false, message: 'Password or OTP is required' });
     }
 
     const token = generateToken(user._id, user.role);
@@ -197,6 +284,7 @@ exports.login = async (req, res) => {
         id: user._id,
         name: user.name,
         phone: user.phone,
+        email: user.email,
         role: user.role,
         staffRole: user.staffRole,
         isServiceProvider: user.isServiceProvider,

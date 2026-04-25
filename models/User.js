@@ -26,7 +26,9 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     lowercase: true,
-    trim: true
+    trim: true,
+    unique: true,
+    sparse: true // Allow null/missing emails to still be unique
   },
   role: {
     type: String,
@@ -106,6 +108,24 @@ const userSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 userSchema.index({ phone: 1 });
+userSchema.index({ email: 1 });
 userSchema.index({ role: 1, isActive: 1 });
+
+// Password hashing middleware
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Password verification method
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
 module.exports = mongoose.model('User', userSchema);

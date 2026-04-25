@@ -138,6 +138,17 @@ server.listen(PORT, '0.0.0.0', () => {
   `);
 });
 
+// Gracefully handle port-in-use error
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ Port ${PORT} is already in use!`);
+    console.log(`💡 To fix, run this command:\n   npx kill-port ${PORT}\n   then restart with: npm run dev\n`);
+    process.exit(1);
+  } else {
+    throw err;
+  }
+});
+
 
 
 

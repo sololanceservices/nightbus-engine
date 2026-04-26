@@ -78,6 +78,18 @@ exports.createBus = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Create bus error:', error);
+    
+    // Handle duplicate key error (MongoDB 11000)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0];
+      const message = field === 'chassisNumber' 
+        ? 'A bus with this Chassis Number already exists.' 
+        : field === 'registrationNumber' 
+          ? 'A bus with this Registration Number already exists.'
+          : 'This bus is already registered.';
+      return res.status(400).json({ success: false, message });
+    }
+
     res.status(500).json({ success: false, message: error.message });
   }
 };

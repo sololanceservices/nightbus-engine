@@ -25,6 +25,7 @@ app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(mongoSanitize());
 app.use(morgan('combined'));
 app.use(express.static('public'));
+app.use('/uploads', express.static('uploads'));
 
 // Rate Limiting — protect all API routes
 const apiLimiter = rateLimit({

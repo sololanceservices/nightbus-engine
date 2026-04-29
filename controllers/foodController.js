@@ -5,6 +5,8 @@ const FoodOrder = require('../models/FoodOrder');
 const User = require('../models/User');
 const Wallet = require('../models/Wallet');
 const walletController = require('./walletController');
+const fs = require('fs');
+const path = require('path');
 
 // --- SMART ETA CONSTANTS ---
 // We assume a fixed delivery buffer time of 5 mins for simplicity in the MVP
@@ -337,7 +339,7 @@ exports.cancelOrderUser = async (req, res) => {
 
 exports.addVendorItem = async (req, res) => {
   try {
-    const { name, description, price, prepTime, isVeg, image } = req.body;
+    const { name, description, price, prepTime, isVeg, images } = req.body;
     let vendor = await FoodVendor.findOne({ userId: req.user.id });
     if (!vendor) return res.status(403).json({ success: false, message: 'Not a vendor' });
 
@@ -348,11 +350,57 @@ exports.addVendorItem = async (req, res) => {
       price,
       prepTime,
       isVeg,
-      image
+      images
     });
     
     await item.save();
     res.status(201).json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+exports.getVendorItems = async (req, res) => {
+  try {
+    let vendor = await FoodVendor.findOne({ userId: req.user.id });
+    if (!vendor) return res.status(403).json({ success: false, message: 'Not a vendor' });
+
+    const items = await FoodItem.find({ vendorId: vendor._id }).sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: items });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+exports.updateVendorItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let vendor = await FoodVendor.findOne({ userId: req.user.id });
+    if (!vendor) return res.status(403).json({ success: false, message: 'Not a vendor' });
+
+    const item = await FoodItem.findOneAndUpdate(
+      { _id: id, vendorId: vendor._id },
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
+
+    if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
+    res.status(200).json({ success: true, data: item });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+exports.deleteVendorItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+    let vendor = await FoodVendor.findOne({ userId: req.user.id });
+    if (!vendor) return res.status(403).json({ success: false, message: 'Not a vendor' });
+
+    const item = await FoodItem.findOneAndDelete({ _id: id, vendorId: vendor._id });
+    if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
+    
+    res.status(200).json({ success: true, message: 'Item deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });
   }
@@ -394,3 +442,34 @@ exports.getFoodOrderDetails = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+exports.uploadFoodImages = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No files uploaded' });
+    }
+
+    const backupDir = path.join(__dirname, '../../../backups/food_images');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    const filePaths = [];
+    
+    for (const file of req.files) {
+      // file path in the local server uploads dir (Multer will save it there based on config in route)
+      const localUrlPath = `/uploads/food/${file.filename}`;
+      filePaths.push(localUrlPath);
+
+      // Copy to backup dir
+      const backupFilePath = path.join(backupDir, file.filename);
+      fs.copyFileSync(file.path, backupFilePath);
+    }
+
+    res.status(200).json({ success: true, data: filePaths, message: 'Images uploaded and backed up successfully' });
+  } catch (error) {
+    console.error('Image upload error:', error);
+    res.status(500).json({ success: false, message: 'Server error during upload' });
+  }
+};
+

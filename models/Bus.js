@@ -99,6 +99,12 @@ const busSchema = new mongoose.Schema({
     unique: true,
     uppercase: true
   },
+  busNumber: {
+    type: String,
+    uppercase: true
+    // Note: Not setting unique: true here in Mongoose to avoid conflicts if the index is ghosted
+    // But we should populate it from registrationNumber if missing
+  },
   busName: String,
 
   // GPS & Tracking
@@ -258,6 +264,15 @@ const busSchema = new mongoose.Schema({
 
 busSchema.index({ ownerId: 1, isActive: 1 });
 busSchema.index({ currentLocation: '2dsphere' });
+busSchema.index({ busNumber: 1 }); // Ensure we have an index for the field we use for search/populate
+
+// Pre-save hook to ensure busNumber is populated
+busSchema.pre('save', function(next) {
+  if (!this.busNumber && this.registrationNumber) {
+    this.busNumber = this.registrationNumber;
+  }
+  next();
+});
 
 // Method to generate seat configuration based on total seats
 busSchema.methods.generateSeatConfiguration = function () {

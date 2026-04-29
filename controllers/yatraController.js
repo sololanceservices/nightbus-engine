@@ -4,12 +4,48 @@ const YatraBooking = require('../models/YatraBooking');
 const Bus = require('../models/Bus');
 const Wallet = require('../models/Wallet');
 const walletController = require('./walletController');
+const fs = require('fs');
+const path = require('path');
 
 // ============================================================
 // OWNER APIS
 // ============================================================
 
 /**
+ * POST /yatra/owner/packages/upload-images
+ * Upload images for a yatra package
+ */
+exports.uploadYatraImages = async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No files uploaded' });
+    }
+
+    const backupDir = path.join(__dirname, '../../../backups/yatra_images');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    const filePaths = [];
+    
+    for (const file of req.files) {
+      // file path in the local server uploads dir (Multer will save it there based on config in route)
+      const localUrlPath = `/uploads/yatra/${file.filename}`;
+      filePaths.push(localUrlPath);
+
+      // Copy to backup dir
+      const backupFilePath = path.join(backupDir, file.filename);
+      fs.copyFileSync(file.path, backupFilePath);
+    }
+
+    res.status(200).json({ success: true, data: filePaths, message: 'Images uploaded and backed up successfully' });
+  } catch (error) {
+    console.error('Yatra image upload error:', error);
+    res.status(500).json({ success: false, message: 'Server error during upload' });
+  }
+};
+
+/**  
  * POST /yatra/owner/packages
  * Create a new Yatra package
  */

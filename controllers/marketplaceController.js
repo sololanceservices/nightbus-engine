@@ -133,6 +133,7 @@ exports.updateProviderProfile = async (req, res) => {
     console.error('Error updating profile:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
+};
 
 // --- GET OWN PROVIDER PROFILE ---
 exports.getMyProviderProfile = async (req, res) => {

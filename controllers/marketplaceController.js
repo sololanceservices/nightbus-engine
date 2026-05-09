@@ -108,6 +108,32 @@ exports.toggleProviderStatus = async (req, res) => {
   }
 };
 
+// --- UPDATE PROVIDER PROFILE ---
+exports.updateProviderProfile = async (req, res) => {
+  try {
+    const { businessName, description, location, pricing, availability } = req.body;
+    
+    const update = {};
+    if (businessName) update.businessName = businessName;
+    if (description) update.description = description;
+    if (location) update.location = location;
+    if (pricing) update.pricing = pricing;
+    if (availability) update.availability = availability;
+
+    const provider = await ServiceProvider.findOneAndUpdate(
+      { userId: req.user.id },
+      update,
+      { new: true }
+    );
+    
+    if (!provider) return res.status(404).json({ success: false, message: 'Provider profile not found' });
+    
+    res.json({ success: true, data: provider });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+
 // --- GET OWN PROVIDER PROFILE ---
 exports.getMyProviderProfile = async (req, res) => {
   try {
@@ -126,7 +152,7 @@ exports.searchServices = async (req, res) => {
     const { serviceType, city, page = 1, limit = 10, sortBy = 'newest' } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     
-    const query = { isApproved: true };
+    const query = { isApproved: true, isActive: true };
     if (serviceType) query.serviceType = serviceType;
 
     if (city) {

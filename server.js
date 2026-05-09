@@ -100,6 +100,8 @@ app.use('/api/food', require('./routes/foodRoutes'));
 app.use('/api/yatra', require('./routes/yatraRoutes'));
 app.use('/api/marketplace', require('./routes/marketplaceRoutes'));
 app.use('/api/reviews', require('./routes/reviewRoutes'));
+app.use('/api/coupons', require('./routes/couponRoutes'));
+app.use('/api/home-content', require('./routes/homeContentRoutes'));
 // Test page (temporary)
 // Test page (temporary)
 app.get('/test-auth', (req, res) => {

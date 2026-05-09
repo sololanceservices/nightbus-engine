@@ -133,17 +133,72 @@ exports.registerFoodVendor = async (req, res) => {
 
 exports.updateFoodVendorProfile = async (req, res) => {
   try {
+    const { name, description, avgDeliveryTime, defaultPrepTime, isNightServiceActive, serviceAreas, routes, availableHours } = req.body;
+    
+    const updateData = {
+      name,
+      description,
+      avgDeliveryTime,
+      defaultPrepTime,
+      isNightServiceActive,
+      serviceAreas,
+      routes,
+      availableHours
+    };
+
+    // Remove undefined fields
+    Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
     const vendor = await FoodVendor.findOneAndUpdate(
       { userId: req.user.id },
-      { $set: req.body },
+      { $set: updateData },
       { new: true, runValidators: true }
     );
     if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
     res.status(200).json({ success: true, data: vendor });
   } catch (error) {
+    console.error('Update Profile Error:', error);
     res.status(500).json({ success: false, message: 'Error updating profile' });
   }
 };
+
+exports.getVendorDashboardStats = async (req, res) => {
+  try {
+    const vendor = await FoodVendor.findOne({ userId: req.user.id });
+    if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const orders = await FoodOrder.find({
+      vendorId: vendor._id,
+      createdAt: { $gte: today }
+    });
+
+    const totalOrders = orders.length;
+    const deliveredOrders = orders.filter(o => o.status === 'delivered');
+    const todayEarnings = deliveredOrders.reduce((acc, o) => acc + o.totalAmount, 0);
+    const avgOrderValue = totalOrders > 0 ? (todayEarnings / (deliveredOrders.length || 1)) : 0;
+
+    // Simulation of peak time (could be calculated from historical data)
+    const peakTime = "7 PM - 10 PM"; 
+
+    res.status(200).json({
+      success: true,
+      data: {
+        todayEarnings,
+        totalOrders,
+        avgOrderValue: Math.round(avgOrderValue),
+        peakTime,
+        performance: vendor.performance
+      }
+    });
+  } catch (error) {
+    console.error('Stats Error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 
 exports.toggleFoodVendorStatus = async (req, res) => {
   try {

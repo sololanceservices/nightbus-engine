@@ -10,7 +10,8 @@ const {
   updateProviderCoverage,
   getAllProviders,
   updateProviderStatus,
-  toggleProviderStatus
+  toggleProviderStatus,
+  updateProviderProfile
 } = require('../controllers/marketplaceController');
 const { protect } = require('../middleware/auth');
 
@@ -26,6 +27,7 @@ router.get('/provider/leads', getMatchingLeads);
 router.get('/provider/profile', getMyProviderProfile);
 router.put('/provider/coverage', updateProviderCoverage);
 router.put('/provider/status', toggleProviderStatus);
+router.put('/provider/profile', updateProviderProfile);
 
 // Admin endpoints (Role enforcement simplified for MVP)
 router.get('/admin/providers', getAllProviders);

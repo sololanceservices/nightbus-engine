@@ -24,7 +24,8 @@ exports.createBooking = async (req, res) => {
       paymentMethod, 
       paymentDetails, 
       platformFee, 
-      taxes 
+      taxes,
+      couponCode 
     } = req.body;
 
     if (!userId) {
@@ -36,7 +37,8 @@ exports.createBooking = async (req, res) => {
       totalAmount, 
       platformFee: platformFee || totalAmount * 0.02, 
       taxes: taxes || totalAmount * 0.05, 
-      paymentMethod 
+      paymentMethod,
+      promoCode: couponCode
     };
 
     console.log(`[BOOKING CONTROLLER] New booking request: ${paymentMethod} for user: ${userId}`);

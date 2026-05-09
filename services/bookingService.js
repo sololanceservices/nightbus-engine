@@ -4,6 +4,7 @@ const Segment = require('../models/Segment');
 const Payment = require('../models/Payment');
 const Bus = require('../models/Bus');
 const User = require('../models/User');
+const Coupon = require('../models/Coupon');
 const { sendNotification } = require('../utils/notifications');
 const mongoose = require('mongoose');
 
@@ -29,7 +30,7 @@ exports.finalizeBooking = async ({
     try {
         console.log(`[BOOKING SERVICE] Finalizing booking for user: ${userId} (Sessions: ${!!session})`);
 
-        const { segments, totalAmount, platformFee, taxes, paymentMethod } = bookingData;
+        const { segments, totalAmount, platformFee, taxes, paymentMethod, promoCode } = bookingData;
         const { razorpay_payment_id, razorpay_order_id } = paymentDetails;
 
         // 1. Idempotency Check: See if this payment_id has already been used
@@ -59,6 +60,25 @@ exports.finalizeBooking = async ({
             }
         }
 
+        // 2.5 Validate Coupon if present
+        let discountAmount = 0;
+        if (promoCode) {
+            const coupon = await Coupon.findOne({ code: promoCode.toUpperCase(), isActive: true }).session(session);
+            if (coupon) {
+                // Re-calculate discount for security
+                if (coupon.discountType === 'flat') {
+                    discountAmount = coupon.discountValue;
+                } else {
+                    discountAmount = (totalAmount * coupon.discountValue) / 100;
+                    if (coupon.maxDiscount) discountAmount = Math.min(discountAmount, coupon.maxDiscount);
+                }
+                
+                // Increment used count
+                coupon.usedCount += 1;
+                await coupon.save({ session });
+            }
+        }
+
         // 3. Create Journey
         const journey = new Journey({
             customerId: userId,
@@ -67,6 +87,8 @@ exports.finalizeBooking = async ({
             taxes,
             bookingDate: new Date(),
             paymentMethod,
+            promoCode,
+            discountAmount,
             status: 'confirmed',
             paymentStatus: 'completed'
         });

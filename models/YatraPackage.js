@@ -63,6 +63,11 @@ const yatraPackageSchema = new mongoose.Schema({
     landmark: String,
     time: String // "05:00 AM"
   },
+  destinationCity: {
+    type: String,
+    required: true,
+    index: true
+  },
 
   // Day-wise itinerary
   itinerary: [itineraryDaySchema],
@@ -133,5 +138,8 @@ yatraPackageSchema.pre('save', function (next) {
 yatraPackageSchema.index({ status: 1, startDate: 1 });
 yatraPackageSchema.index({ ownerId: 1, status: 1 });
 yatraPackageSchema.index({ category: 1, status: 1 });
+
+yatraPackageSchema.index({ destinationCity: 1, status: 1 });
+yatraPackageSchema.index({ 'departurePoint.city': 1, destinationCity: 1 });
 
 module.exports = mongoose.model('YatraPackage', yatraPackageSchema);

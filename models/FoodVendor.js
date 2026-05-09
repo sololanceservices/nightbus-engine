@@ -22,10 +22,16 @@ const foodVendorSchema = new mongoose.Schema({
     default: 5
   },
   avgDeliveryTime: {
-    type: Number, // in minutes
+    type: Number, // in minutes (estimated travel time)
     required: true,
     default: 20
   },
+  defaultPrepTime: {
+    type: Number, // in minutes (kitchen prep time)
+    required: true,
+    default: 15
+  },
+
   serviceAreas: [
     {
       city: { type: String, required: true },
@@ -45,7 +51,19 @@ const foodVendorSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  isNightServiceActive: {
+    type: Boolean,
+    default: false
+  },
+  performance: {
+    rating: { type: Number, default: 4.5 },
+    totalReviews: { type: Number, default: 0 },
+    ordersCompleted: { type: Number, default: 0 },
+    cancellationRate: { type: Number, default: 0 },
+    complaints: { type: Number, default: 0 }
   }
+
 }, { timestamps: true });
 
 // Geospatial index for distance searches

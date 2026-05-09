@@ -36,7 +36,8 @@ const {
   getVendorItems,
   updateVendorItem,
   deleteVendorItem,
-  uploadFoodImages
+  uploadFoodImages,
+  getVendorDashboardStats
 } = require('../controllers/foodController');
 const { protect } = require('../middleware/auth');
 
@@ -61,6 +62,7 @@ router.post('/vendor/register', registerFoodVendor);
 router.get('/vendor/profile', getFoodVendorProfile);
 router.put('/vendor/profile', updateFoodVendorProfile);
 router.put('/vendor/status', toggleFoodVendorStatus);
+router.get('/vendor/stats', getVendorDashboardStats);
 router.put('/orders/:id/status', updateOrderStatus);
 
 module.exports = router;

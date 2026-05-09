@@ -12,7 +12,7 @@ const serviceProviderSchema = new mongoose.Schema({
   serviceType: {
     type: String,
     // Add known types but keep it open enough for expansion
-    enum: ['Driver', 'Taxi', 'Hotel', 'Photographer', 'Event Organizer', 'Hall/Garden', 'Other'],
+    enum: ['Driver', 'Taxi', 'Hotel', 'Photographer', 'Event Organizer', 'Hall/Garden', 'Dhool', 'Buggy', 'Other'],
     required: true
   },
   businessName: {

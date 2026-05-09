@@ -162,6 +162,8 @@ exports.updateFoodVendorProfile = async (req, res) => {
   }
 };
 
+const Wallet = require('../models/Wallet');
+
 exports.getVendorDashboardStats = async (req, res) => {
   try {
     const vendor = await FoodVendor.findOne({ userId: req.user.id });
@@ -180,8 +182,33 @@ exports.getVendorDashboardStats = async (req, res) => {
     const todayEarnings = deliveredOrders.reduce((acc, o) => acc + o.totalAmount, 0);
     const avgOrderValue = totalOrders > 0 ? (todayEarnings / (deliveredOrders.length || 1)) : 0;
 
-    // Simulation of peak time (could be calculated from historical data)
-    const peakTime = "7 PM - 10 PM"; 
+    const last7Days = new Date();
+    last7Days.setDate(last7Days.getDate() - 7);
+    const historicalOrders = await FoodOrder.find({
+      vendorId: vendor._id,
+      createdAt: { $gte: last7Days },
+      status: 'delivered'
+    });
+
+    // Simple peak hour calculation
+    let peakHourStr = "N/A";
+    if (historicalOrders.length > 0) {
+      const hours = historicalOrders.map(o => new Date(o.createdAt).getHours());
+      const counts = hours.reduce((acc, h) => { acc[h] = (acc[h] || 0) + 1; return acc; }, {});
+      const peakHour = Object.keys(counts).reduce((a, b) => counts[a] > counts[b] ? a : b);
+      const start = Number(peakHour);
+      peakHourStr = `${start}:00 - ${start + 1}:00`;
+    }
+
+    // All-time stats
+    const allOrders = await FoodOrder.find({ vendorId: vendor._id });
+    const completed = allOrders.filter(o => o.status === 'delivered').length;
+    const cancelled = allOrders.filter(o => o.status === 'rejected' || o.status === 'cancelled').length;
+    const cancellationRate = allOrders.length > 0 ? Math.round((cancelled / allOrders.length) * 100) : 0;
+
+    // Get Wallet Balance
+    const wallet = await Wallet.findOne({ userId: req.user.id });
+    const walletBalance = wallet ? wallet.balance : 0;
 
     res.status(200).json({
       success: true,
@@ -189,8 +216,13 @@ exports.getVendorDashboardStats = async (req, res) => {
         todayEarnings,
         totalOrders,
         avgOrderValue: Math.round(avgOrderValue),
-        peakTime,
-        performance: vendor.performance
+        peakTime: peakHourStr,
+        walletBalance,
+        performance: {
+          rating: vendor.performance?.rating || 0,
+          ordersCompleted: completed,
+          cancellationRate: cancellationRate
+        }
       }
     });
   } catch (error) {

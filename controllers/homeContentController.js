@@ -1,6 +1,8 @@
 const HomeBanner = require('../models/HomeBanner');
 const FeaturedDestination = require('../models/FeaturedDestination');
 const YatraPackage = require('../models/YatraPackage');
+const fs = require('fs');
+const path = require('path');
 
 // --- PUBLIC ENDPOINTS ---
 
@@ -83,4 +85,38 @@ exports.getAdminHomeContent = async (req, res) => {
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
+};
+
+exports.uploadHomeImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const targetDir = path.join(__dirname, '../uploads/home');
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    const backupDir = path.join(__dirname, '../../../backups/home_images');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+
+    const extension = path.extname(req.file.originalname);
+    const fileName = `home-${Date.now()}${extension}`;
+    const targetPath = path.join(targetDir, fileName);
+    const backupPath = path.join(backupDir, fileName);
+
+    // Move from temp to target
+    fs.renameSync(req.file.path, targetPath);
+    // Copy to backup
+    fs.copyFileSync(targetPath, backupPath);
+
+    const publicUrl = `/uploads/home/${fileName}`;
+    res.json({ success: true, data: publicUrl });
+  } catch (error) {
+    console.error('Home image upload error:', error);
+    res.status(500).json({ success: false, message: 'Upload failed' });
+  }
 };

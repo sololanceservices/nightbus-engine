@@ -13,8 +13,12 @@ const { protect } = require('../middleware/auth');
 // Public
 router.get('/', getHomeContent);
 
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/temp/' });
+
 // Admin
 router.get('/admin', protect, getAdminHomeContent);
+router.post('/upload', protect, upload.single('image'), require('../controllers/homeContentController').uploadHomeImage);
 router.post('/banners', protect, createBanner);
 router.delete('/banners/:id', protect, deleteBanner);
 router.post('/featured', protect, createFeaturedDestination);

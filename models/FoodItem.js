@@ -30,6 +30,11 @@ const foodItemSchema = new mongoose.Schema({
   isVeg: {
     type: Boolean,
     default: true
+  },
+  category: {
+    type: String,
+    enum: ['thali', 'fastfood', 'beverages', 'chinese', 'all'],
+    default: 'all'
   }
 }, { timestamps: true });
 

@@ -162,7 +162,6 @@ exports.updateFoodVendorProfile = async (req, res) => {
   }
 };
 
-const Wallet = require('../models/Wallet');
 
 exports.getVendorDashboardStats = async (req, res) => {
   try {
@@ -426,7 +425,7 @@ exports.cancelOrderUser = async (req, res) => {
 
 exports.addVendorItem = async (req, res) => {
   try {
-    const { name, description, price, prepTime, isVeg, images } = req.body;
+    const { name, description, price, prepTime, isVeg, images, category } = req.body;
     let vendor = await FoodVendor.findOne({ userId: req.user.id });
     if (!vendor) return res.status(403).json({ success: false, message: 'Not a vendor' });
 
@@ -437,7 +436,8 @@ exports.addVendorItem = async (req, res) => {
       price,
       prepTime,
       isVeg,
-      images
+      images,
+      category: category || 'all'
     });
     
     await item.save();

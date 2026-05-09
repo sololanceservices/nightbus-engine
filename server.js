@@ -90,7 +90,6 @@ app.use('/api/service-bookings', require('./routes/serviceBookings'));
 app.use('/api/vendors', require('./routes/vendors'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/staff', require('./routes/staff'));
-app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/wallet', require('./routes/wallet'));
 app.use('/api/payment', require('./routes/payment'));

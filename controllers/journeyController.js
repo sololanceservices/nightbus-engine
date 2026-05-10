@@ -103,10 +103,7 @@ async function findDirectJourneys(from, to, dayName, passengers) {
     const directRoutes = await Route.find({
       isActive: true,
       days: dayName,
-      $and: [
-        { 'stops.name': new RegExp(`^${from}$`, 'i') },
-        { 'stops.name': new RegExp(`^${to}$`, 'i') }
-      ]
+      'stops.name': { $all: [new RegExp(from, 'i'), new RegExp(to, 'i')] }
     }).populate({
       path: 'busId',
       populate: { path: 'ownerId', select: 'ownerSettings' }
@@ -114,9 +111,9 @@ async function findDirectJourneys(from, to, dayName, passengers) {
 
     for (const route of directRoutes) {
       const fromIndex = route.stops.findIndex(
-        s => s.name.toLowerCase() === from.toLowerCase()
+        s => s.name.toLowerCase().includes(from.toLowerCase())
       );
-      const toIndex = route.stops.findIndex(s => s.name.toLowerCase() === to.toLowerCase());
+      const toIndex = route.stops.findIndex(s => s.name.toLowerCase().includes(to.toLowerCase()));
 
       if (fromIndex < toIndex) {
         // Loop through each active round
@@ -357,25 +354,26 @@ async function findLegs(from, to, dayName, passengers) {
   try {
     const query = {
       isActive: true,
-      days: dayName,
-      'stops.name': new RegExp(`^${from}$`, 'i')
+      days: dayName
     };
 
     if (to) {
-      query['stops.name'] = new RegExp(`^${to}$`, 'i');
+      query['stops.name'] = { $all: [new RegExp(from, 'i'), new RegExp(to, 'i')] };
+    } else {
+      query['stops.name'] = new RegExp(from, 'i');
     }
 
     const routes = await Route.find(query).populate('busId');
 
     for (const route of routes) {
       const fromIndex = route.stops.findIndex(
-        s => s.name.toLowerCase() === from.toLowerCase()
+        s => s.name.toLowerCase().includes(from.toLowerCase())
       );
       if (fromIndex === -1) continue;
 
       let toIndex = -1;
       if (to) {
-        toIndex = route.stops.findIndex(s => s.name.toLowerCase() === to.toLowerCase());
+        toIndex = route.stops.findIndex(s => s.name.toLowerCase().includes(to.toLowerCase()));
         if (toIndex === -1 || toIndex <= fromIndex) continue;
       } else {
         // Return all possible destinations from this stop
@@ -483,7 +481,7 @@ async function findNextAvailableDate(from, to, startDate) {
       const routes = await Route.find({
         isActive: true,
         days: dayName,
-        'stops.name': { $all: [new RegExp(`^${from}$`, 'i'), new RegExp(`^${to}$`, 'i')] }
+        'stops.name': { $all: [new RegExp(from, 'i'), new RegExp(to, 'i')] }
       }).lean();
 
       if (routes.length > 0) {
@@ -512,8 +510,8 @@ async function findIntermediateStops(from, to, dayName) {
 
     for (const route of routes) {
       const stops = route.stops.map(s => s.name);
-      const fromIdx = stops.findIndex(n => n.toLowerCase() === from.toLowerCase());
-      const toIdx = stops.findIndex(n => n.toLowerCase() === to.toLowerCase());
+      const fromIdx = stops.findIndex(n => n.toLowerCase().includes(from.toLowerCase()));
+      const toIdx = stops.findIndex(n => n.toLowerCase().includes(to.toLowerCase()));
 
       if (fromIdx !== -1 && toIdx !== -1 && fromIdx < toIdx) {
         // Found a route with both cities

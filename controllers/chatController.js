@@ -230,3 +230,73 @@ exports.getChatHistory = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+exports.getOrCreateSupportChat = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // 1. Find a support admin
+    let supportAdmin = await User.findOne({ role: 'admin', adminRole: 'support', isActive: true });
+    
+    // 2. Fallback to any admin if no specific support admin
+    if (!supportAdmin) {
+      supportAdmin = await User.findOne({ role: 'admin', isActive: true });
+    }
+
+    // 3. Fallback to owner if no admin (should not happen in prod but for dev)
+    if (!supportAdmin) {
+      // For development/testing: If NO admin exists in the entire system, create one
+      const anyUser = await User.findOne();
+      if (!anyUser) {
+        // Truly empty DB - create System Admin
+        supportAdmin = new User({
+          phone: '9999999999',
+          name: 'System Support',
+          role: 'admin',
+          adminRole: 'support',
+          isActive: true,
+          isVerified: true
+        });
+        await supportAdmin.save();
+      } else {
+        // Use the first available user as support if no admin exists (Safety fallback)
+        supportAdmin = await User.findOne({ isActive: true });
+      }
+    }
+
+    if (!supportAdmin) {
+      return res.status(404).json({ success: false, message: 'Support team is currently offline' });
+    }
+
+    // Reuse getOrCreateChat logic
+    const contactId = supportAdmin._id;
+    const participants = [userId, contactId].sort();
+
+    let chat = await Chat.findOne({
+      participants: { $all: participants },
+      contextType: 'support',
+      contextId: contactId
+    }).populate('participants', 'name profilePicture role serviceType phone');
+
+    if (!chat) {
+      chat = new Chat({
+        participants,
+        contextType: 'support',
+        contextId: contactId, // Use admin ID as context for support channel
+        status: 'active',
+        messages: [{
+          senderId: contactId,
+          message: `Hello! I'm ${supportAdmin.name} from NightBus Support. How can we help you today?`,
+          timestamp: new Date()
+        }]
+      });
+      await chat.save();
+      chat = await Chat.findById(chat._id).populate('participants', 'name profilePicture role serviceType phone');
+    }
+
+    res.status(200).json({ success: true, data: chat });
+  } catch (error) {
+    console.error('Error in getOrCreateSupportChat:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};

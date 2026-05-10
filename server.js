@@ -134,7 +134,7 @@ server.listen(PORT, '0.0.0.0', () => {
 ╔════════════════════════════════════════╗
 ║   🚀 Bus Booking Server Running        ║
 ║   ✅ HTTP:  http://0.0.0.0:${PORT}      ║
-║   ✅ API:   http://192.168.10.6:${PORT}/api ║
+║   ✅ API:   http://192.168.10.5:${PORT}/api ║
 ║   ✅ IO:    Socket.IO Enabled          ║
 ╚════════════════════════════════════════╝
   `);

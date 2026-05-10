@@ -462,3 +462,36 @@ exports.updateFCMToken = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Reset Password with Email OTP
+exports.resetPasswordWithOTP = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Email, OTP, and new password are required' });
+    }
+
+    const storedOTP = emailOtpStore[email];
+    const isValid = storedOTP && storedOTP.otp === otp && storedOTP.expiresAt > Date.now();
+
+    if (!isValid) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired OTP' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    user.password = newPassword; // The model should have a pre-save hook to hash this
+    await user.save();
+
+    // Clear OTP
+    delete emailOtpStore[email];
+
+    res.status(200).json({ success: true, message: 'Password reset successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

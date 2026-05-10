@@ -12,6 +12,7 @@ router.post('/verify-otp', authController.verifyOTP);
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.post('/logout', authController.logout);
+router.post('/reset-password', authController.resetPasswordWithOTP);
 router.post('/test-login', authController.testLogin); // ⚠️ TEMPORARY: Remove in production
 
 // Protected routes

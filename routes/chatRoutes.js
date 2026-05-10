@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const {
   getOrCreateChat,
+  getOrCreateSupportChat,
   sendMessage,
   getUserChats,
   getChatHistory,
@@ -13,6 +14,7 @@ const { protect } = require('../middleware/auth');
 router.use(protect);
 
 router.post('/init', getOrCreateChat);
+router.post('/init-support', getOrCreateSupportChat);
 router.get('/', getUserChats);
 router.get('/:chatId', getChatHistory);
 router.post('/:chatId/messages', sendMessage);

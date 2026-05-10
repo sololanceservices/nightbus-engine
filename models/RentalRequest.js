@@ -22,7 +22,7 @@ const rentalRequestSchema = new mongoose.Schema({
   },
   occasion: {
     type: String,
-    enum: ['Marriage', 'Party', 'Function', 'Other'],
+    enum: ['Marriage', 'Party', 'Educational/Student', 'Function', 'Religious', 'Picnic', 'Other'],
     required: true
   },
   vehicleType: {

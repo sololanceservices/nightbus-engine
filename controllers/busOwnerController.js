@@ -209,7 +209,9 @@ exports.updateBus = async (req, res) => {
       'bookingSettings',
       'isActive',
       'status',
-      'homeDepot'
+      'homeDepot',
+      'insurancePolicyNumber',
+      'permitNumber'
     ];
 
     allowedUpdates.forEach(field => {

@@ -54,7 +54,7 @@ exports.createPackage = async (req, res) => {
     const ownerId = req.user.id;
     const {
       busId, title, description, category, highlights,
-      startDate, endDate, departurePoint, itinerary,
+      startDate, endDate, departurePoint, destinationCity, itinerary,
       inclusions, exclusions, pricePerPerson, totalSeats,
       contactPhone, images
     } = req.body;
@@ -65,7 +65,7 @@ exports.createPackage = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Bus not found or not authorized' });
     }
 
-    if (!title || !startDate || !endDate || !pricePerPerson || !totalSeats) {
+    if (!title || !startDate || !endDate || !pricePerPerson || !totalSeats || !destinationCity) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
@@ -88,6 +88,7 @@ exports.createPackage = async (req, res) => {
       exclusions: exclusions || [],
       pricePerPerson,
       totalSeats,
+      destinationCity,
       contactPhone,
       images: images || [],
       status: req.body.status || 'draft'
@@ -134,7 +135,7 @@ exports.updatePackage = async (req, res) => {
 
     const allowed = [
       'busId', 'title', 'description', 'highlights', 'startDate', 'endDate',
-      'departurePoint', 'itinerary', 'inclusions', 'exclusions', 
+      'departurePoint', 'destinationCity', 'itinerary', 'inclusions', 'exclusions', 
       'pricePerPerson', 'totalSeats', 'contactPhone', 'images', 'status', 'category'
     ];
 

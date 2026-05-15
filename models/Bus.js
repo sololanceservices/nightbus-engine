@@ -106,6 +106,8 @@ const busSchema = new mongoose.Schema({
     // But we should populate it from registrationNumber if missing
   },
   busName: String,
+  insurancePolicyNumber: String,
+  permitNumber: String,
 
   // GPS & Tracking
   gpsDeviceId: String,

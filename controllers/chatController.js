@@ -78,14 +78,20 @@ exports.getOrCreateChat = async (req, res) => {
   } catch (error) {
     // Handle duplicate key gracefully (race condition)
     if (error.code === 11000) {
+      console.log('🔄 Chat already exists (index collision), fetching existing chat...');
+      const participants = [req.user.id, req.body.contactId].sort();
       const chat = await Chat.findOne({
-        participants: { $all: [req.user.id, req.body.contactId] },
-        contextType: req.body.contextType || 'support'
+        participants: { $all: participants },
+        contextType: req.body.contextType || 'support',
+        contextId: req.body.contextId || req.body.contactId
       }).populate('participants', 'name profilePicture role serviceType phone');
-      return res.status(200).json({ success: true, data: chat });
+      
+      if (chat) {
+        return res.status(200).json({ success: true, data: chat });
+      }
     }
-    console.error('Error in getOrCreateChat:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ Error in getOrCreateChat:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
   }
 };
 

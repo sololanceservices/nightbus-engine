@@ -11,11 +11,20 @@ exports.getHomeContent = async (req, res) => {
     const banners = await HomeBanner.find({ isActive: true }).sort({ order: 1 });
     const featured = await FeaturedDestination.find({ isActive: true }).sort({ order: 1 });
     
+    // Fetch all upcoming active Yatra packages for the home calendar
+    const latestYatras = await YatraPackage.find({ 
+      status: 'active',
+      startDate: { $gte: new Date() }
+    })
+      .sort({ startDate: 1 })
+      .select('title description startDate endDate images category pricePerPerson totalSeats bookedSeats destinationCity departurePoint');
+
     res.json({
       success: true,
       data: {
         banners,
-        featured
+        featured,
+        latestYatras
       }
     });
   } catch (error) {
@@ -118,5 +127,25 @@ exports.uploadHomeImage = async (req, res) => {
   } catch (error) {
     console.error('Home image upload error:', error);
     res.status(500).json({ success: false, message: 'Upload failed' });
+  }
+};
+
+exports.updateBanner = async (req, res) => {
+  try {
+    const banner = await HomeBanner.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!banner) return res.status(404).json({ success: false, message: 'Banner not found' });
+    res.json({ success: true, data: banner });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateFeaturedDestination = async (req, res) => {
+  try {
+    const destination = await FeaturedDestination.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!destination) return res.status(404).json({ success: false, message: 'Destination not found' });
+    res.json({ success: true, data: destination });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

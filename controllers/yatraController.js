@@ -133,9 +133,9 @@ exports.updatePackage = async (req, res) => {
     }
 
     const allowed = [
-      'title', 'description', 'highlights', 'departurePoint', 'itinerary',
-      'inclusions', 'exclusions', 'pricePerPerson', 'contactPhone',
-      'images', 'status', 'category'
+      'busId', 'title', 'description', 'highlights', 'startDate', 'endDate',
+      'departurePoint', 'itinerary', 'inclusions', 'exclusions', 
+      'pricePerPerson', 'totalSeats', 'contactPhone', 'images', 'status', 'category'
     ];
 
     allowed.forEach(field => {

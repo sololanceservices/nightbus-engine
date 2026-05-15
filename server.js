@@ -158,7 +158,10 @@ server.on('error', (err) => {
 
 // Initialize background jobs
 const { initAutoCancelJob } = require('./services/autoCancelService');
+const { initAutoCompleteJob } = require('./services/autoCompleteService');
+
 initAutoCancelJob();
+initAutoCompleteJob();
 
 // Handle graceful shutdown
 process.on('SIGTERM', () => {

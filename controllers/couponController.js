@@ -83,6 +83,17 @@ exports.validateCoupon = async (req, res) => {
   }
 };
 
+// Update Coupon (Admin)
+exports.updateCoupon = async (req, res) => {
+  try {
+    const coupon = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    if (!coupon) return res.status(404).json({ success: false, message: 'Coupon not found' });
+    res.json({ success: true, data: coupon });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // Delete Coupon (Admin)
 exports.deleteCoupon = async (req, res) => {
   try {

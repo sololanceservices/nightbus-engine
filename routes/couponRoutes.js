@@ -15,6 +15,7 @@ router.post('/validate', protect, validateCoupon);
 // Admin only routes
 router.post('/', protect, createCoupon);
 router.get('/', protect, getCoupons);
+router.put('/:id', protect, require('../controllers/couponController').updateCoupon);
 router.delete('/:id', protect, deleteCoupon);
 
 module.exports = router;

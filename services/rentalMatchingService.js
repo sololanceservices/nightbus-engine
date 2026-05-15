@@ -38,16 +38,26 @@ exports.matchRequestToOwners = async (requestId) => {
     ]);
 
     // 2. Query configurations (exact name match first, then proximity)
-    // For 10k users, we optimize by indexing the route configs
     const configs = await OwnerRouteConfig.find({
       isActive: true,
       vehicleType: request.vehicleType,
       capacity: { $gte: request.peopleCount }
     }).populate('ownerId', 'name fcmToken fcmTokens');
 
+    // 2b. Get owners who are AVAILABLE on this specific date
+    const availableOwners = await RentalService.find({
+      availableDates: request.date
+    }).distinct('ownerId');
+
+    const availableOwnerIds = availableOwners.map(id => id.toString());
+
     const matches = [];
 
     for (const cfg of configs) {
+      // ONLY match if the owner is available on this date
+      const ownerId = (cfg.ownerId._id || cfg.ownerId).toString();
+      if (!availableOwnerIds.includes(ownerId)) continue;
+
       let score = 0;
       let matchType = 'similarity';
 
@@ -160,11 +170,38 @@ exports.matchRequestToOwners = async (requestId) => {
 };
 
 /**
- * Match owner's new listing to existing customer requests
+ * Match owner's new availability to existing customer requests
+ */
+exports.matchAvailabilityToRequests = async (serviceId) => {
+  try {
+    const service = await RentalService.findById(serviceId).populate('routeConfigId');
+    if (!service || !service.routeConfigId) return;
+
+    const { availableDates } = service;
+    const cfg = service.routeConfigId;
+
+    // Find open requests that match the vehicle type and are on the newly available dates
+    const requests = await RentalRequest.find({
+      status: 'open',
+      vehicleType: cfg.vehicleType,
+      peopleCount: { $lte: cfg.capacity },
+      date: { $in: availableDates }
+    });
+
+    console.log(`🔄 Matching availability for owner ${service.ownerId} against ${requests.length} potential requests`);
+
+    for (const req of requests) {
+      await this.matchRequestToOwners(req._id);
+    }
+  } catch (error) {
+    console.error('Availability matching error:', error);
+  }
+};
+
+/**
+ * Match owner's new route config to existing customer requests
  */
 exports.matchServiceToRequests = async (configId) => {
-  // Logic works similarly but in reverse
-  // Finds open requests that match the new config
   try {
     const cfg = await OwnerRouteConfig.findById(configId);
     if (!cfg) return;
@@ -176,8 +213,6 @@ exports.matchServiceToRequests = async (configId) => {
     });
 
     for (const req of requests) {
-      // Re-use logic or call main engine for each
-      // (Optimization: main engine handles specific request)
       await this.matchRequestToOwners(req._id);
     }
   } catch (error) {

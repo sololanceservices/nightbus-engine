@@ -111,6 +111,10 @@ exports.addRentalService = async (req, res) => {
     });
     
     await service.save();
+    
+    // Trigger proactive matching for the new availability (Async)
+    matchingService.matchAvailabilityToRequests(service._id).catch(err => console.error('Matching trigger failed:', err));
+
     res.status(201).json({ success: true, data: service });
   } catch (error) {
     console.error('Error adding availability:', error);

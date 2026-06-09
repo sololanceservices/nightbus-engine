@@ -12,7 +12,7 @@ const serviceProviderSchema = new mongoose.Schema({
   serviceType: {
     type: String,
     // Add known types but keep it open enough for expansion
-    enum: ['Driver', 'Taxi', 'Hotel', 'Photographer', 'Event Organizer', 'Hall/Garden', 'Dhool', 'Buggy', 'Other'],
+    enum: ['Driver', 'Taxi', 'Mechanic', 'Hotel', 'Photographer', 'Event Organizer', 'Hall/Garden', 'Dhool', 'Buggy', 'Other'],
     required: true
   },
   businessName: {
@@ -48,6 +48,30 @@ const serviceProviderSchema = new mongoose.Schema({
   availability: {
     type: String,
     default: 'Available 24/7'
+  },
+  licenseNumber: {
+    type: String,
+    trim: true
+  },
+  licenseImage: {
+    type: String
+  },
+  fitnessNumber: {
+    type: String,
+    trim: true
+  },
+  fitnessImage: {
+    type: String
+  },
+  insurancePolicyNumber: {
+    type: String,
+    trim: true
+  },
+  insuranceImage: {
+    type: String
+  },
+  mechanicImage: {
+    type: String
   },
   isApproved: {
     type: Boolean,

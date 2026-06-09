@@ -99,8 +99,39 @@ exports.getFoodVendorProfile = async (req, res) => {
 
 exports.registerFoodVendor = async (req, res) => {
   try {
-    const { name, location, deliveryRadius, avgDeliveryTime, serviceAreas, routes, availableHours } = req.body;
+    const { name, location, deliveryRadius, avgDeliveryTime, serviceAreas, routes, availableHours, fssaiNumber, gstNumber } = req.body;
     
+    // Mandatory verification check: at least one of FSSAI or GST must be provided
+    if (!fssaiNumber && !gstNumber) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Verification failed: Providing either a valid FSSAI License Number or GSTIN Number is mandatory.' 
+      });
+    }
+
+    // Validate FSSAI License Number format (14 digits)
+    if (fssaiNumber) {
+      const fssaiPattern = /^[0-9]{14}$/;
+      if (!fssaiPattern.test(fssaiNumber.trim())) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid FSSAI License Number. Must be exactly 14 digits.' 
+        });
+      }
+    }
+
+    // Validate GSTIN format (15-character alphanumeric Indian GST format)
+    if (gstNumber) {
+      const cleanGST = gstNumber.trim().toUpperCase();
+      const gstPattern = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      if (!gstPattern.test(cleanGST)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid GSTIN Number. Expected standard 15-character Indian GST format (e.g. 22AAAAA1111A1Z1).' 
+        });
+      }
+    }
+
     let vendor = await FoodVendor.findOne({ userId: req.user.id });
     if (vendor) {
       // Sync the flag just in case it was missing from the User record
@@ -116,7 +147,9 @@ exports.registerFoodVendor = async (req, res) => {
       avgDeliveryTime,
       serviceAreas,
       routes,
-      availableHours
+      availableHours,
+      fssaiNumber: fssaiNumber ? fssaiNumber.trim() : undefined,
+      gstNumber: gstNumber ? gstNumber.trim().toUpperCase() : undefined
     });
 
     await vendor.save();

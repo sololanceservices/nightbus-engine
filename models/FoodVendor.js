@@ -48,6 +48,14 @@ const foodVendorSchema = new mongoose.Schema({
     startTime: { type: String, required: true, default: "08:00" },
     endTime: { type: String, required: true, default: "22:00" }
   },
+  fssaiNumber: {
+    type: String,
+    trim: true
+  },
+  gstNumber: {
+    type: String,
+    trim: true
+  },
   isActive: {
     type: Boolean,
     default: true

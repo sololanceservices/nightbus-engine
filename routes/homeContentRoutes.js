@@ -6,7 +6,9 @@ const {
   deleteBanner, 
   createFeaturedDestination, 
   deleteFeaturedDestination,
-  getAdminHomeContent
+  getAdminHomeContent,
+  createAdBanner,
+  deleteAdBanner
 } = require('../controllers/homeContentController');
 const { protect } = require('../middleware/auth');
 
@@ -25,5 +27,10 @@ router.delete('/banners/:id', protect, deleteBanner);
 router.post('/featured', protect, createFeaturedDestination);
 router.put('/featured/:id', protect, require('../controllers/homeContentController').updateFeaturedDestination);
 router.delete('/featured/:id', protect, deleteFeaturedDestination);
+
+// Ad Banners
+router.post('/ads', protect, createAdBanner);
+router.put('/ads/:id', protect, require('../controllers/homeContentController').updateAdBanner);
+router.delete('/ads/:id', protect, deleteAdBanner);
 
 module.exports = router;

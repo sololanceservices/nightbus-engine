@@ -87,7 +87,7 @@ exports.verifyEmailOTP = async (req, res) => {
 // Verify OTP and handle existing/new users
 exports.verifyOTP = async (req, res) => {
   try {
-    const { phone, otp, role = 'customer', name, email, fcmToken } = req.body;
+    const { phone, otp, role = 'customer', name, email, fcmToken, isServiceProvider, serviceType, isFoodVendor, companyProfile, kycDetails } = req.body;
 
     if (!phone || !otp) {
       return res.status(400).json({ success: false, message: 'Phone and OTP are required' });
@@ -122,7 +122,12 @@ exports.verifyOTP = async (req, res) => {
         email,
         isVerified: true,
         role: userRole,
-        fcmToken // Store for push notifications
+        fcmToken, // Store for push notifications
+        isServiceProvider: isServiceProvider || false,
+        serviceType: serviceType || undefined,
+        isFoodVendor: isFoodVendor || (userRole === 'vendor'),
+        companyProfile: companyProfile || undefined,
+        kycDetails: kycDetails ? { ...kycDetails, isVerified: false } : undefined
       });
       if (fcmToken) user.fcmTokens = [fcmToken];
       await user.save();
@@ -135,6 +140,11 @@ exports.verifyOTP = async (req, res) => {
       if (role && ['customer', 'owner', 'staff', 'vendor', 'admin'].includes(role)) {
         user.role = role;
       }
+      if (isServiceProvider !== undefined) user.isServiceProvider = isServiceProvider;
+      if (serviceType) user.serviceType = serviceType;
+      if (isFoodVendor !== undefined) user.isFoodVendor = isFoodVendor;
+      if (companyProfile) user.companyProfile = companyProfile;
+      if (kycDetails) user.kycDetails = { ...kycDetails, isVerified: false };
 
       // Update FCM token if provided
       if (fcmToken) {
@@ -179,7 +189,7 @@ exports.verifyOTP = async (req, res) => {
 // Register
 exports.register = async (req, res) => {
   try {
-    const { phone, name, email, password, role = 'customer', fcmToken } = req.body;
+    const { phone, name, email, password, role = 'customer', fcmToken, isServiceProvider, serviceType, isFoodVendor, companyProfile, kycDetails } = req.body;
 
     if (!phone || !name || !email || !password) {
       return res.status(400).json({ success: false, message: 'All fields (name, email, phone, password) are required' });
@@ -203,7 +213,12 @@ exports.register = async (req, res) => {
       password, 
       role, 
       isVerified: true, 
-      fcmToken 
+      fcmToken,
+      isServiceProvider: isServiceProvider || false,
+      serviceType: serviceType || undefined,
+      isFoodVendor: isFoodVendor || (role === 'vendor'),
+      companyProfile: companyProfile || undefined,
+      kycDetails: kycDetails ? { ...kycDetails, isVerified: false } : undefined
     });
     
     if (fcmToken) user.fcmTokens = [fcmToken];

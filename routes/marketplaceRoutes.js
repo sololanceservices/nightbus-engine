@@ -11,9 +11,16 @@ const {
   getAllProviders,
   updateProviderStatus,
   toggleProviderStatus,
-  updateProviderProfile
+  updateProviderProfile,
+  uploadLicenseImage,
+  uploadFitnessImage,
+  uploadInsuranceImage,
+  uploadMechanicImage
 } = require('../controllers/marketplaceController');
 const { protect } = require('../middleware/auth');
+
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/temp/' });
 
 router.use(protect); // Secure all routes for MVP
 
@@ -23,6 +30,10 @@ router.post('/requests', createServiceRequest);
 
 // Provider endpoints
 router.post('/provider/register', registerProvider);
+router.post('/provider/upload-license', upload.single('licenseImage'), uploadLicenseImage);
+router.post('/provider/upload-fitness', upload.single('fitnessImage'), uploadFitnessImage);
+router.post('/provider/upload-insurance', upload.single('insuranceImage'), uploadInsuranceImage);
+router.post('/provider/upload-mechanic', upload.single('mechanicImage'), uploadMechanicImage);
 router.get('/provider/leads', getMatchingLeads);
 router.get('/provider/profile', getMyProviderProfile);
 router.put('/provider/coverage', updateProviderCoverage);

@@ -66,6 +66,18 @@ exports.updateOwnerSettings = async (req, res) => {
 exports.createBus = async (req, res) => {
   try {
     const ownerId = req.userId;
+    const { permitNumber, insurancePolicyNumber, fitnessNumber } = req.body;
+
+    if (!permitNumber || !permitNumber.trim()) {
+      return res.status(400).json({ success: false, message: 'Permit number is mandatory' });
+    }
+    if (!insurancePolicyNumber || !insurancePolicyNumber.trim()) {
+      return res.status(400).json({ success: false, message: 'Insurance policy number is mandatory' });
+    }
+    if (!fitnessNumber || !fitnessNumber.trim()) {
+      return res.status(400).json({ success: false, message: 'Fitness certificate number is mandatory' });
+    }
+
     const busData = { ...req.body, ownerId };
 
     const bus = new Bus(busData);
@@ -211,7 +223,8 @@ exports.updateBus = async (req, res) => {
       'status',
       'homeDepot',
       'insurancePolicyNumber',
-      'permitNumber'
+      'permitNumber',
+      'fitnessNumber'
     ];
 
     allowedUpdates.forEach(field => {

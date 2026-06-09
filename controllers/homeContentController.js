@@ -1,6 +1,7 @@
 const HomeBanner = require('../models/HomeBanner');
 const FeaturedDestination = require('../models/FeaturedDestination');
 const YatraPackage = require('../models/YatraPackage');
+const AdBanner = require('../models/AdBanner');
 const fs = require('fs');
 const path = require('path');
 
@@ -10,6 +11,7 @@ exports.getHomeContent = async (req, res) => {
   try {
     const banners = await HomeBanner.find({ isActive: true }).sort({ order: 1 });
     const featured = await FeaturedDestination.find({ isActive: true }).sort({ order: 1 });
+    const adBanners = await AdBanner.find({ isActive: true }).sort({ order: 1 });
     
     // Fetch all upcoming active Yatra packages for the home calendar
     const latestYatras = await YatraPackage.find({ 
@@ -24,7 +26,8 @@ exports.getHomeContent = async (req, res) => {
       data: {
         banners,
         featured,
-        latestYatras
+        latestYatras,
+        adBanners
       }
     });
   } catch (error) {
@@ -90,7 +93,8 @@ exports.getAdminHomeContent = async (req, res) => {
     try {
       const banners = await HomeBanner.find().sort({ order: 1 });
       const featured = await FeaturedDestination.find().sort({ order: 1 });
-      res.json({ success: true, data: { banners, featured } });
+      const adBanners = await AdBanner.find().sort({ order: 1 });
+      res.json({ success: true, data: { banners, featured, adBanners } });
     } catch (error) {
       res.status(500).json({ success: false, message: error.message });
     }
@@ -145,6 +149,36 @@ exports.updateFeaturedDestination = async (req, res) => {
     const destination = await FeaturedDestination.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!destination) return res.status(404).json({ success: false, message: 'Destination not found' });
     res.json({ success: true, data: destination });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.createAdBanner = async (req, res) => {
+  try {
+    const adBanner = new AdBanner(req.body);
+    await adBanner.save();
+    res.status(201).json({ success: true, data: adBanner });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateAdBanner = async (req, res) => {
+  try {
+    const adBanner = await AdBanner.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!adBanner) return res.status(404).json({ success: false, message: 'Ad banner not found' });
+    res.json({ success: true, data: adBanner });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deleteAdBanner = async (req, res) => {
+  try {
+    const adBanner = await AdBanner.findByIdAndDelete(req.params.id);
+    if (!adBanner) return res.status(404).json({ success: false, message: 'Ad banner not found' });
+    res.json({ success: true, message: 'Ad banner deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

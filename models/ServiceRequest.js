@@ -10,7 +10,7 @@ const serviceRequestSchema = new mongoose.Schema({
   },
   serviceType: {
     type: String,
-    enum: ['Driver', 'Taxi', 'Hotel', 'Photographer', 'Event Organizer', 'Hall/Garden', 'Other'],
+    enum: ['Driver', 'Taxi', 'Mechanic', 'Hotel', 'Photographer', 'Event Organizer', 'Hall/Garden', 'Dhool', 'Buggy', 'Other'],
     required: true
   },
   location: {

@@ -29,7 +29,7 @@ const chatSchema = new mongoose.Schema({
   }],
   contextType: {
     type: String,
-    enum: ['service', 'rental', 'food', 'support'],
+    enum: ['service', 'rental', 'food', 'food_order', 'support'],
     required: true
   },
   contextId: {

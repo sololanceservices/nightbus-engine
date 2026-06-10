@@ -108,15 +108,18 @@ const busSchema = new mongoose.Schema({
   busName: String,
   insurancePolicyNumber: {
     type: String,
-    required: [true, 'Insurance policy number is mandatory']
+    required: [true, 'Insurance policy number is mandatory'],
+    default: 'PENDING'
   },
   permitNumber: {
     type: String,
-    required: [true, 'Permit number is mandatory']
+    required: [true, 'Permit number is mandatory'],
+    default: 'PENDING'
   },
   fitnessNumber: {
     type: String,
-    required: [true, 'Fitness certificate number is mandatory']
+    required: [true, 'Fitness certificate number is mandatory'],
+    default: 'PENDING'
   },
 
   // GPS & Tracking

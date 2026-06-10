@@ -2,12 +2,12 @@ const crypto = require('crypto');
 const PaymentOrder = require('../models/PaymentOrder');
 const bookingService = require('../services/bookingService');
 const Payment = require('../models/Payment');
-const { Cashfree } = require('cashfree-pg');
+const { Cashfree, CFEnvironment } = require('cashfree-pg');
 
 // Initialize Cashfree
 Cashfree.XClientId = process.env.CASHFREE_APP_ID;
 Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY;
-Cashfree.XEnvironment = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' ? Cashfree.Environment.PRODUCTION : Cashfree.Environment.SANDBOX;
+Cashfree.XEnvironment = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX;
 
 /**
  * Create a new Cashfree Order and store intent

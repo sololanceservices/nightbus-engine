@@ -286,3 +286,32 @@ exports.getPassengerManifest = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+/**
+ * Get active incidents for the staff's assigned bus
+ */
+exports.getActiveIncidents = async (req, res) => {
+  try {
+    const staffId = req.userId;
+    const user = await User.findById(staffId);
+    if (!user || user.role !== 'staff') {
+      return res.status(403).json({ success: false, message: 'Unauthorized staff access' });
+    }
+
+    const busId = user.assignedBus;
+    if (!busId) {
+      return res.json({ success: true, incidents: [] });
+    }
+
+    const Incident = require('../models/Incident');
+    const incidents = await Incident.find({
+      busId,
+      status: { $in: ['reported', 'investigating'] }
+    }).sort('-createdAt').limit(5);
+
+    res.json({ success: true, incidents });
+  } catch (error) {
+    console.error('❌ Get active incidents error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

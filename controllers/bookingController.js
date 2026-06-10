@@ -389,4 +389,59 @@ exports.getQRCode = async (req, res) => {
   }
 };
 
+/**
+ * Trigger Panic Alert
+ */
+exports.triggerPanic = async (req, res) => {
+  try {
+    const { id: bookingId } = req.params;
+    const userId = req.userId || req.user?._id || req.user?.id;
+    
+    const booking = await Journey.findById(bookingId).populate('segments');
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+    
+    if (booking.customerId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+    
+    const activeSegment = booking.segments.find(s => ['confirmed', 'boarded', 'requested'].includes(s.status));
+    if (!activeSegment) {
+       return res.status(400).json({ success: false, message: 'No active travel segment found' });
+    }
+
+    const busId = activeSegment.busId;
+    
+    const Incident = require('../models/Incident');
+    const incident = await Incident.create({
+      busId,
+      reportedBy: userId,
+      type: 'medical',
+      description: 'PASSENGER PANIC ALERT TRIGGERED',
+      severity: 'critical',
+      status: 'reported',
+      location: { type: 'Point', coordinates: [0, 0] }
+    });
+
+    const StaffAssignment = require('../models/StaffAssignment');
+    const assignments = await StaffAssignment.find({ busId, status: 'assigned' });
+    
+    for (const assignment of assignments) {
+      await sendNotification(assignment.staffId, {
+        title: '🚨 PASSENGER PANIC ALERT 🚨',
+        body: 'A passenger has triggered an emergency panic alert!',
+        type: 'panic_alert',
+        data: { incidentId: incident._id, busId }
+      }).catch(err => console.log('Notification error:', err));
+    }
+
+    res.json({ success: true, message: 'Panic alert triggered successfully', incident });
+
+  } catch (error) {
+    console.error('[PANIC ALERT ERROR]', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = exports;

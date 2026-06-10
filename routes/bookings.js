@@ -33,5 +33,6 @@ router.get('/:id', auth.verifyToken, statusOrIdRouter);
 router.get('/user/:userId', auth.verifyToken, bookingController.getUserBookings);
 router.put('/:id/cancel', auth.verifyToken, bookingController.cancelBooking);
 router.get('/:id/qr-code', auth.verifyToken, bookingController.getQRCode);
+router.post('/:id/panic', auth.verifyToken, bookingController.triggerPanic);
 
 module.exports = router;

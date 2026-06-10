@@ -11,6 +11,7 @@ router.use(checkRole(['staff']));
 // Operational Routes
 router.get('/active-trip', staffController.getActiveTrip);
 router.get('/trip/:tripId/manifest', staffController.getPassengerManifest);
+router.get('/active-incidents', staffController.getActiveIncidents);
 
 router.post('/verify-boarding', staffController.verifyBoarding);
 router.post('/verify-drop', staffController.verifyDrop);

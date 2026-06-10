@@ -44,7 +44,7 @@ const journeySchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['wallet', 'card', 'upi', 'razorpay', 'cash']
+    enum: ['wallet', 'card', 'upi', 'cashfree', 'cash']
   },
   paymentStatus: {
     type: String,

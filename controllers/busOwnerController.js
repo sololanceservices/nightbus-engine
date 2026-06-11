@@ -706,11 +706,21 @@ exports.getOwnerStaff = async (req, res) => {
     
     // Get assignments for each staff
     const staffWithAssignments = await Promise.all(staff.map(async (s) => {
-      const assignment = await StaffAssignment.findOne({ staffId: s._id, status: 'active' })
-        .populate('busId', 'chassisNumber busName');
+      const assignment = await StaffAssignment.findOne({ staffId: s._id, status: { $in: ['assigned', 'started'] } })
+        .populate('busId', 'chassisNumber busName busNumber registrationNumber');
+      
+      let currentAssignment = null;
+      if (assignment) {
+        currentAssignment = {
+          ...assignment.toObject(),
+          busNumber: assignment.busId?.busNumber || assignment.busId?.registrationNumber || 'Assigned Bus'
+        };
+      }
+
       return {
         ...s.toObject(),
-        assignment
+        assignment,
+        currentAssignment
       };
     }));
 
@@ -726,7 +736,7 @@ exports.getOwnerStaff = async (req, res) => {
 exports.createStaff = async (req, res) => {
   try {
     const ownerId = req.userId;
-    const { name, phone, password, staffRole, assignedBus } = req.body;
+    const { name, phone, email, password, staffRole, assignedBus, permissions } = req.body;
 
     // 1. Check if user already exists
     const existingUser = await User.findOne({ phone });
@@ -735,17 +745,17 @@ exports.createStaff = async (req, res) => {
     }
 
     // 2. Create staff user
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password || '123456', salt);
-
+    // Do NOT pre-hash password here as the User model has a pre-save hook that hashes it.
     const staff = new User({
       name,
       phone,
-      password: hashedPassword,
+      email: email || undefined,
+      password: password || 'staff123',
       role: 'staff',
       ownerId,
       staffRole,
       assignedBus,
+      permissions,
       isActive: true
     });
 
@@ -787,7 +797,7 @@ exports.updateStaff = async (req, res) => {
 exports.assignStaff = async (req, res) => {
   try {
     const ownerId = req.userId;
-    const { staffId, busId, role } = req.body;
+    const { staffId, busId, role, shiftDate, shiftStartTime, shiftEndTime } = req.body;
 
     // 1. Verify staff and bus belong to owner
     const [staff, bus] = await Promise.all([
@@ -800,18 +810,20 @@ exports.assignStaff = async (req, res) => {
 
     // 2. Deactivate any existing active assignments for this staff
     await StaffAssignment.updateMany(
-      { staffId, status: 'active' },
-      { status: 'inactive', endDate: new Date() }
+      { staffId, status: { $in: ['assigned', 'started'] } },
+      { status: 'cancelled', completedAt: new Date() }
     );
 
     // 3. Create new assignment
     const assignment = new StaffAssignment({
       staffId,
       busId,
+      ownerId,
       role,
-      assignedBy: ownerId,
-      startDate: new Date(),
-      status: 'active'
+      shiftDate: shiftDate ? new Date(shiftDate) : new Date(),
+      shiftStartTime: shiftStartTime || '06:00',
+      shiftEndTime: shiftEndTime || '18:00',
+      status: 'assigned'
     });
 
     await assignment.save();
@@ -830,9 +842,9 @@ exports.assignStaff = async (req, res) => {
 exports.getStaffAssignments = async (req, res) => {
   try {
     const ownerId = req.userId;
-    const assignments = await StaffAssignment.find({ assignedBy: ownerId })
+    const assignments = await StaffAssignment.find({ ownerId })
       .populate('staffId', 'name phone')
-      .populate('busId', 'chassisNumber busName')
+      .populate('busId', 'chassisNumber busName busNumber registrationNumber')
       .sort('-createdAt');
 
     res.json({ success: true, data: { assignments } });

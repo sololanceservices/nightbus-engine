@@ -51,7 +51,18 @@ exports.sendEmailOTP = async (req, res) => {
     emailOtpStore[email] = { otp, expiresAt: Date.now() + 10 * 60 * 1000 };
 
     // Send via email service
-    await emailService.sendOTP(email, otp);
+    const emailResult = await emailService.sendOTP(email, otp);
+
+    console.log(`📧 Email OTP for ${email}: ${otp}`);
+
+    if (process.env.NODE_ENV !== 'production' || !emailResult.success) {
+      return res.status(200).json({ 
+        success: true, 
+        message: 'OTP sent to email successfully (Dev/Fallback mode)', 
+        otp,
+        emailError: emailResult.success ? null : emailResult.error
+      });
+    }
 
     res.status(200).json({ success: true, message: 'OTP sent to email successfully' });
   } catch (error) {

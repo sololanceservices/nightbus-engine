@@ -476,7 +476,8 @@ exports.addVendorItem = async (req, res) => {
     await item.save();
     res.status(201).json({ success: true, data: item });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ addVendorItem error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 };
 
@@ -507,7 +508,8 @@ exports.updateVendorItem = async (req, res) => {
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
     res.status(200).json({ success: true, data: item });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ updateVendorItem error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 };
 
@@ -522,7 +524,8 @@ exports.deleteVendorItem = async (req, res) => {
     
     res.status(200).json({ success: true, message: 'Item deleted successfully' });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('❌ deleteVendorItem error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Server error' });
   }
 };
 
@@ -589,7 +592,7 @@ exports.uploadFoodImages = async (req, res) => {
     res.status(200).json({ success: true, data: filePaths, message: 'Images uploaded and backed up successfully' });
   } catch (error) {
     console.error('Image upload error:', error);
-    res.status(500).json({ success: false, message: 'Server error during upload' });
+    res.status(500).json({ success: false, message: error.message || 'Server error during upload' });
   }
 };
 

@@ -83,7 +83,7 @@ exports.searchLocations = async (req, res) => {
     // 3. Photon External Search (Typo tolerant, general locations)
     let externalResults = [];
     try {
-      const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=5&lat=22.5&lon=79.5&lang=en`;
+      const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(searchQuery)}&limit=5&lat=22.5&lon=79.5&lang=en&countrycode=in`;
       const response = await fetch(photonUrl);
       if (response.ok) {
         const data = await response.json();

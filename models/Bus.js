@@ -39,6 +39,7 @@ const busSchema = new mongoose.Schema({
       'WiFi',
       'AC',
       'Charging Point',
+      'Charging Port',
       'Water Bottle',
       'Blanket',
       'Pillow',
@@ -171,7 +172,12 @@ const busSchema = new mongoose.Schema({
     },
     reminderSent: Boolean
   }],
+  
 
+
+
+
+  
   // Photos
   photos: [{
     url: String,
@@ -281,10 +287,14 @@ busSchema.index({ ownerId: 1, isActive: 1 });
 busSchema.index({ currentLocation: '2dsphere' });
 busSchema.index({ busNumber: 1 }); // Ensure we have an index for the field we use for search/populate
 
-// Pre-save hook to ensure busNumber is populated
+// Pre-save hook to ensure busNumber and chassisNumber are populated
 busSchema.pre('save', function(next) {
   if (!this.busNumber && this.registrationNumber) {
     this.busNumber = this.registrationNumber;
+  }
+  if (!this.chassisNumber && this.registrationNumber) {
+    const cleanReg = this.registrationNumber.replace(/[^A-Z0-9]/ig, '').toUpperCase();
+    this.chassisNumber = `TEMPCHASSIS${cleanReg}`.padEnd(17, '0').slice(0, 17);
   }
   next();
 });

@@ -83,6 +83,24 @@ const busSchema = new mongoose.Schema({
       type: String,
       enum: ['window', 'aisle', 'middle']
     },
+    type: {
+      type: String,
+      enum: ['seat', 'sleeper', 'aisle', 'driver', 'door'],
+      default: 'seat'
+    },
+    deck: {
+      type: String,
+      enum: ['lower', 'upper'],
+      default: 'lower'
+    },
+    price: {
+      type: Number,
+      default: 0
+    },
+    isLadies: {
+      type: Boolean,
+      default: false
+    },
     isAvailable: {
       type: Boolean,
       default: true

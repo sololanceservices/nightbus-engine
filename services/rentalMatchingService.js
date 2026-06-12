@@ -1,9 +1,10 @@
-// ==================== services/rentalMatchingService.js ====================
 const RentalRequest = require('../models/RentalRequest');
 const OwnerRouteConfig = require('../models/OwnerRouteConfig');
 const RentalMatch = require('../models/RentalMatch');
+const RentalService = require('../models/RentalService');
 const Location = require('../models/Location');
 const { sendNotification } = require('../utils/notifications');
+const { getEquivalentVehicleTypes } = require('../utils/vehicleTypeMapper');
 
 /**
  * Calculate distance between two points in km (Haversine formula)
@@ -40,7 +41,7 @@ exports.matchRequestToOwners = async (requestId) => {
     // 2. Query configurations (exact name match first, then proximity)
     const configs = await OwnerRouteConfig.find({
       isActive: true,
-      vehicleType: request.vehicleType,
+      vehicleType: { $in: getEquivalentVehicleTypes(request.vehicleType) },
       capacity: { $gte: request.peopleCount }
     }).populate('ownerId', 'name fcmToken fcmTokens');
 
@@ -183,7 +184,7 @@ exports.matchAvailabilityToRequests = async (serviceId) => {
     // Find open requests that match the vehicle type and are on the newly available dates
     const requests = await RentalRequest.find({
       status: 'open',
-      vehicleType: cfg.vehicleType,
+      vehicleType: { $in: getEquivalentVehicleTypes(cfg.vehicleType) },
       peopleCount: { $lte: cfg.capacity },
       date: { $in: availableDates }
     });
@@ -208,7 +209,7 @@ exports.matchServiceToRequests = async (configId) => {
 
     const requests = await RentalRequest.find({
       status: 'open',
-      vehicleType: cfg.vehicleType,
+      vehicleType: { $in: getEquivalentVehicleTypes(cfg.vehicleType) },
       peopleCount: { $lte: cfg.capacity }
     });
 

@@ -189,7 +189,9 @@ exports.verifyOTP = async (req, res) => {
         isVerified: user.isVerified,
         isServiceProvider: user.isServiceProvider,
         serviceType: user.serviceType,
-        isFoodVendor: user.isFoodVendor
+        isFoodVendor: user.isFoodVendor,
+        companyProfile: user.companyProfile,
+        kycDetails: user.kycDetails
       }
     });
   } catch (error) {
@@ -252,7 +254,9 @@ exports.register = async (req, res) => {
         role: user.role,
         isServiceProvider: user.isServiceProvider,
         serviceType: user.serviceType,
-        isFoodVendor: user.isFoodVendor
+        isFoodVendor: user.isFoodVendor,
+        companyProfile: user.companyProfile,
+        kycDetails: user.kycDetails
       }
     });
   } catch (error) {
@@ -315,7 +319,9 @@ exports.login = async (req, res) => {
         staffRole: user.staffRole,
         isServiceProvider: user.isServiceProvider,
         serviceType: user.serviceType,
-        isFoodVendor: user.isFoodVendor
+        isFoodVendor: user.isFoodVendor,
+        companyProfile: user.companyProfile,
+        kycDetails: user.kycDetails
       }
     });
   } catch (error) {
@@ -342,7 +348,9 @@ exports.getCurrentUser = async (req, res) => {
         isVerified: user.isVerified,
         isServiceProvider: user.isServiceProvider,
         serviceType: user.serviceType,
-        isFoodVendor: user.isFoodVendor
+        isFoodVendor: user.isFoodVendor,
+        companyProfile: user.companyProfile,
+        kycDetails: user.kycDetails
       }
     });
   } catch (error) {
@@ -443,7 +451,9 @@ exports.testLogin = async (req, res) => {
         isVerified: user.isVerified,
         isServiceProvider: user.isServiceProvider,
         serviceType: user.serviceType,
-        isFoodVendor: user.isFoodVendor
+        isFoodVendor: user.isFoodVendor,
+        companyProfile: user.companyProfile,
+        kycDetails: user.kycDetails
       }
     });
   } catch (error) {

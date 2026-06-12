@@ -64,7 +64,16 @@ const userSchema = new mongoose.Schema({
   companyProfile: {
     companyName: String,
     gstin: String,
-    address: String
+    address: String,
+    businessType: String,
+    fleetSize: Number,
+    establishmentYear: Number,
+    website: String,
+    supportPhone: String,
+    bankName: String,
+    bankAccountNumber: String,
+    bankIfscCode: String,
+    bankAccountHolderName: String
   },
   ownerSettings: {
     autoConfirmBookings: {

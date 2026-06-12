@@ -94,6 +94,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/wallet', require('./routes/wallet'));
 app.use('/api/payment', require('./routes/payment'));
 app.use('/api/rental-requests', require('./routes/rentalRoutes'));
+app.use('/api/rental', require('./routes/rentalRoutes'));
 app.use('/api/chats', require('./routes/chatRoutes'));
 app.use('/api/food', require('./routes/foodRoutes'));
 app.use('/api/yatra', require('./routes/yatraRoutes'));

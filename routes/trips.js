@@ -7,6 +7,6 @@ const auth = require('../middleware/auth'); // Optionally use this
 router.get('/active', tripController.getActiveTrip);
 router.post('/start', tripController.startTrip);
 router.post('/manual-override', tripController.manualOverrideStop);
-router.get('/', tripController.getTimeline);
+router.get('/', auth.verifyToken, tripController.getTimeline);
 
 module.exports = router;

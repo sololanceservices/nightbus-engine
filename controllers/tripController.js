@@ -120,7 +120,15 @@ exports.getTimeline = async (req, res) => {
         const { busId, serviceDate, status } = req.query;
 
         let query = {};
-        if (busId) query.busId = busId;
+        if (busId) {
+            query.busId = busId;
+        } else if (req.userRole === 'owner') {
+            // Filter by this owner's buses
+            const ownerBuses = await Bus.find({ ownerId: req.userId }, '_id');
+            const ownerBusIds = ownerBuses.map(b => b._id);
+            query.busId = { $in: ownerBusIds };
+        }
+        
         if (serviceDate) query.serviceDate = new Date(serviceDate);
         if (status) query.status = status;
 

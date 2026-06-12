@@ -111,9 +111,20 @@ exports.getOwnerBuses = async (req, res) => {
     const ownerId = req.userId;
     const buses = await Bus.find({ ownerId });
 
+    // Calculate routeCount and totalSegments (trips) dynamically for each bus
+    const busesWithStats = await Promise.all(buses.map(async (bus) => {
+      const routeCount = await Route.countDocuments({ busId: bus._id, isActive: true });
+      const totalSegments = await Segment.countDocuments({ busId: bus._id });
+      return {
+        ...bus.toObject(),
+        routeCount,
+        totalSegments
+      };
+    }));
+
     res.json({
       success: true,
-      data: { buses }
+      data: { buses: busesWithStats }
     });
   } catch (error) {
     console.error('❌ Get owner buses error:', error);
@@ -216,6 +227,7 @@ exports.updateBus = async (req, res) => {
     const allowedUpdates = [
       'busName',
       'busType',
+      'totalSeats',
       'amenities',
       'externalPlatforms',
       'bookingSettings',
@@ -224,7 +236,11 @@ exports.updateBus = async (req, res) => {
       'homeDepot',
       'insurancePolicyNumber',
       'permitNumber',
-      'fitnessNumber'
+      'fitnessNumber',
+      'fuelType',
+      'condition',
+      'gpsDeviceId',
+      'gpsProvider'
     ];
 
     allowedUpdates.forEach(field => {
@@ -328,7 +344,7 @@ exports.getLiveTrip = async (req, res) => {
       busId,
       travelDate: { $gte: today, $lt: tomorrow },
       status: { $in: ['confirmed', 'boarded', 'in_transit'] }
-    }).populate('routeId').populate('staffId');
+    }).populate('routeId');
 
     res.json({ success: true, data: { liveTrip } });
   } catch (error) {
@@ -353,7 +369,6 @@ exports.getBusTripHistory = async (req, res) => {
 
     const history = await Segment.find({ busId })
       .populate('routeId')
-      .populate('staffId')
       .sort({ travelDate: -1 })
       .limit(50);
 
@@ -490,11 +505,7 @@ exports.getRouteDetails = async (req, res) => {
     const ownerId = req.userId;
 
     const route = await Route.findOne({ _id: routeId, ownerId })
-      .populate('busId')
-      .populate({
-        path: 'assignedStaff.staffId',
-        select: 'name phone'
-      });
+      .populate('busId');
     
     if (!route) {
       return res.status(404).json({
@@ -542,13 +553,18 @@ exports.getBusRoutes = async (req, res) => {
 exports.updateRouteStops = async (req, res) => {
   try {
     const { routeId } = req.params;
-    const { stops } = req.body;
+    const { stops, pathCoordinates, rounds, totalDistance, estimatedDuration } = req.body;
     const ownerId = req.userId;
 
     const route = await Route.findOne({ _id: routeId, ownerId });
     if (!route) return res.status(404).json({ success: false, message: 'Route not found' });
 
     route.stops = stops;
+    if (pathCoordinates) route.pathCoordinates = pathCoordinates;
+    if (rounds) route.rounds = rounds;
+    if (totalDistance !== undefined) route.totalDistance = totalDistance;
+    if (estimatedDuration !== undefined) route.estimatedDuration = estimatedDuration;
+
     await route.save();
 
     res.json({ success: true, message: 'Stops updated successfully', data: { route } });

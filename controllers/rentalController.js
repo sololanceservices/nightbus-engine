@@ -5,6 +5,7 @@ const OwnerRouteConfig = require('../models/OwnerRouteConfig');
 const RentalMatch = require('../models/RentalMatch');
 const User = require('../models/User');
 const matchingService = require('../services/rentalMatchingService');
+const { getEquivalentVehicleTypes } = require('../utils/vehicleTypeMapper');
 
 // --- OWNER ROUTE CONFIG (CAPABILITY LAYER) ---
 
@@ -221,7 +222,7 @@ exports.getMatchingRequestsForOwner = async (req, res) => {
     const orConditions = configs.map(cfg => ({
       from: new RegExp(cfg.from, 'i'),
       to: new RegExp(cfg.to, 'i'),
-      vehicleType: cfg.vehicleType,
+      vehicleType: { $in: getEquivalentVehicleTypes(cfg.vehicleType) },
       budgetMax: { $gte: cfg.priceMin },
       budgetMin: { $lte: cfg.priceMax }
     }));
@@ -268,7 +269,7 @@ exports.getMatchingOwnersForCustomer = async (req, res) => {
       match: {
         from: new RegExp(request.from, 'i'),
         to: new RegExp(request.to, 'i'),
-        vehicleType: request.vehicleType,
+        vehicleType: { $in: getEquivalentVehicleTypes(request.vehicleType) },
         priceMin: { $lte: request.budgetMax },
         priceMax: { $gte: request.budgetMin }
       }

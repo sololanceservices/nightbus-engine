@@ -5,7 +5,9 @@ const nodemailer = require('nodemailer');
  * Real email service using Nodemailer and Gmail SMTP.
  */
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT) || 465,
+  secure: parseInt(process.env.SMTP_PORT) === 465 || !process.env.SMTP_PORT, // true for 465, false for other ports
   auth: {
     user: process.env.GMAIL_USER || process.env.SMTP_USER,
     pass: process.env.GMAIL_APP_PASS || process.env.SMTP_PASS

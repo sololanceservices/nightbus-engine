@@ -116,8 +116,16 @@ async function findDirectJourneys(from, to, dayName, passengers) {
       const toIndex = route.stops.findIndex(s => s.name.toLowerCase().includes(to.toLowerCase()));
 
       if (fromIndex < toIndex) {
-        // Loop through each active round
-        for (const round of (route.rounds || [])) {
+        // Loop through each active round (with fallback to default round if rounds array is empty)
+        let roundsToUse = route.rounds;
+        if (!roundsToUse || roundsToUse.length === 0) {
+          roundsToUse = [{
+            startTime: route.departureTime || route.stops[0]?.departureTime || '07:00',
+            roundLabel: 'Standard Round',
+            isActive: true
+          }];
+        }
+        for (const round of roundsToUse) {
           if (!round.isActive) continue;
 
           // Calculate the time offset between the master stop time and this round's start time
@@ -413,8 +421,16 @@ async function findLegs(from, to, dayName, passengers) {
       }
 
       if (availableSeats >= passengers) {
-        // Iterate through rounds
-        for (const round of (route.rounds || [])) {
+        // Iterate through rounds (with fallback to default round if rounds array is empty)
+        let roundsToUse = route.rounds;
+        if (!roundsToUse || roundsToUse.length === 0) {
+          roundsToUse = [{
+            startTime: route.departureTime || route.stops[0]?.departureTime || '07:00',
+            roundLabel: 'Standard Round',
+            isActive: true
+          }];
+        }
+        for (const round of roundsToUse) {
           if (!round.isActive) continue;
 
           const firstStopDep = route.stops[0].departureTime;

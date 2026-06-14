@@ -100,11 +100,18 @@ exports.addRentalService = async (req, res) => {
     const config = await OwnerRouteConfig.findOne({ _id: routeConfigId, ownerId: req.user.id });
     if (!config) return res.status(404).json({ success: false, message: 'Route configuration not found' });
 
+    // Normalize all available dates to midnight UTC to prevent time-based mismatches
+    const normalizedDates = (availableDates || []).map(d => {
+      const dateObj = new Date(d);
+      dateObj.setUTCHours(0, 0, 0, 0);
+      return dateObj;
+    });
+
     const service = new RentalService({
       ownerId: req.user.id,
       routeConfigId,
       busId: busId || null,
-      availableDates,
+      availableDates: normalizedDates,
       description,
       // Allow per-posting price override
       ...(priceMin && { priceMin }),
@@ -149,19 +156,37 @@ exports.deleteRentalService = async (req, res) => {
 
 exports.createRequest = async (req, res) => {
   try {
-    const { from, to, date, occasion, vehicleType, budgetMin, budgetMax, peopleCount, note } = req.body;
+    const {
+      from, to, date, occasion, vehicleType, budgetMin, budgetMax, peopleCount, note,
+      tripType, returnDate, departureTime, luggageRequirement, isAC
+    } = req.body;
     
+    // Normalize date to midnight UTC to prevent time-based mismatches
+    const normalizedDate = new Date(date);
+    normalizedDate.setUTCHours(0, 0, 0, 0);
+
+    let normalizedReturnDate = undefined;
+    if (returnDate) {
+      normalizedReturnDate = new Date(returnDate);
+      normalizedReturnDate.setUTCHours(0, 0, 0, 0);
+    }
+
     const request = new RentalRequest({
       userId: req.user.id,
       from,
       to,
-      date,
+      date: normalizedDate,
       occasion,
       vehicleType,
       budgetMin,
       budgetMax,
       peopleCount,
       note,
+      tripType: tripType || 'one_way',
+      returnDate: normalizedReturnDate,
+      departureTime,
+      luggageRequirement: luggageRequirement || 'none',
+      isAC: isAC !== undefined ? isAC : false,
       status: 'open'
     });
 
@@ -218,6 +243,14 @@ exports.getMatchingRequestsForOwner = async (req, res) => {
     const services = await RentalService.find({ ownerId: req.user.id });
     const allAvailableDates = [].concat(...services.map(s => s.availableDates));
 
+    const dateConditions = allAvailableDates.map(d => {
+      const start = new Date(d);
+      start.setUTCHours(0, 0, 0, 0);
+      const end = new Date(d);
+      end.setUTCHours(23, 59, 59, 999);
+      return { date: { $gte: start, $lte: end } };
+    });
+
     // 3. Build compound match query
     const orConditions = configs.map(cfg => ({
       from: new RegExp(cfg.from, 'i'),
@@ -229,9 +262,14 @@ exports.getMatchingRequestsForOwner = async (req, res) => {
 
     const query = {
       status: 'open',
-      date: { $in: allAvailableDates },
       $or: orConditions
     };
+
+    if (dateConditions.length > 0) {
+      query.$and = [{ $or: dateConditions }];
+    } else {
+      query._id = null; // Do not match any requests if there are no available dates
+    }
 
     const [requests, total] = await Promise.all([
       RentalRequest.find(query)
@@ -261,9 +299,14 @@ exports.getMatchingOwnersForCustomer = async (req, res) => {
     const request = await RentalRequest.findById(requestId);
     if (!request) return res.status(404).json({ success: false, message: 'Request not found' });
 
-    // 1. Find services available on that date
+    // 1. Find services available on that date (ignoring time components)
+    const startOfDay = new Date(request.date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(request.date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
     const availability = await RentalService.find({
-      availableDates: request.date
+      availableDates: { $elemMatch: { $gte: startOfDay, $lte: endOfDay } }
     }).populate({
       path: 'routeConfigId',
       match: {

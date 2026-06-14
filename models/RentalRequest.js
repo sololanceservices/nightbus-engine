@@ -47,6 +47,26 @@ const rentalRequestSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  tripType: {
+    type: String,
+    enum: ['one_way', 'round_trip'],
+    default: 'one_way'
+  },
+  returnDate: {
+    type: Date
+  },
+  departureTime: {
+    type: String
+  },
+  luggageRequirement: {
+    type: String,
+    enum: ['none', 'light', 'medium', 'heavy'],
+    default: 'none'
+  },
+  isAC: {
+    type: Boolean,
+    default: false
+  },
   status: {
     type: String,
     enum: ['open', 'in_chat', 'agreed', 'completed', 'cancelled'],

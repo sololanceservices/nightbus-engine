@@ -45,9 +45,14 @@ exports.matchRequestToOwners = async (requestId) => {
       capacity: { $gte: request.peopleCount }
     }).populate('ownerId', 'name fcmToken fcmTokens');
 
-    // 2b. Get owners who are AVAILABLE on this specific date
+    // 2b. Get owners who are AVAILABLE on this specific date (ignoring time component)
+    const startOfDay = new Date(request.date);
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    const endOfDay = new Date(request.date);
+    endOfDay.setUTCHours(23, 59, 59, 999);
+
     const availableOwners = await RentalService.find({
-      availableDates: request.date
+      availableDates: { $elemMatch: { $gte: startOfDay, $lte: endOfDay } }
     }).distinct('ownerId');
 
     const availableOwnerIds = availableOwners.map(id => id.toString());
@@ -55,6 +60,7 @@ exports.matchRequestToOwners = async (requestId) => {
     const matches = [];
 
     for (const cfg of configs) {
+      if (!cfg.ownerId) continue;
       // ONLY match if the owner is available on this date
       const ownerId = (cfg.ownerId._id || cfg.ownerId).toString();
       if (!availableOwnerIds.includes(ownerId)) continue;
@@ -181,13 +187,28 @@ exports.matchAvailabilityToRequests = async (serviceId) => {
     const { availableDates } = service;
     const cfg = service.routeConfigId;
 
-    // Find open requests that match the vehicle type and are on the newly available dates
-    const requests = await RentalRequest.find({
+    // Find open requests that match the vehicle type and are on the newly available dates (ignoring time component)
+    const dateConditions = (availableDates || []).map(d => {
+      const start = new Date(d);
+      start.setUTCHours(0, 0, 0, 0);
+      const end = new Date(d);
+      end.setUTCHours(23, 59, 59, 999);
+      return { date: { $gte: start, $lte: end } };
+    });
+
+    const query = {
       status: 'open',
       vehicleType: { $in: getEquivalentVehicleTypes(cfg.vehicleType) },
-      peopleCount: { $lte: cfg.capacity },
-      date: { $in: availableDates }
-    });
+      peopleCount: { $lte: cfg.capacity }
+    };
+
+    if (dateConditions.length > 0) {
+      query.$or = dateConditions;
+    } else {
+      query._id = null; // Do not match any requests if there are no available dates
+    }
+
+    const requests = await RentalRequest.find(query);
 
     console.log(`🔄 Matching availability for owner ${service.ownerId} against ${requests.length} potential requests`);
 

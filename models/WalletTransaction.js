@@ -65,7 +65,8 @@ const walletTransactionSchema = new mongoose.Schema({
     enum: [
       'manual', 'cashfree', 'stripe', 'paytm', 'phonepe', 
       'googlepay', 'upi', 'card', 'netbanking', 
-      'wallet_transfer', 'promocode', 'cashback', 'referral', 'refund'
+      'wallet_transfer', 'promocode', 'cashback', 'referral', 'refund',
+      'money_added', 'food_booking'
     ],
     default: 'manual'
   },
@@ -73,7 +74,10 @@ const walletTransactionSchema = new mongoose.Schema({
   // For debit transactions
   purpose: {
     type: String,
-    enum: ['booking', 'service', 'cancellation_fee', 'penalty', 'transfer', 'withdrawal', 'other']
+    enum: [
+      'booking', 'service', 'cancellation_fee', 'penalty', 'transfer', 
+      'withdrawal', 'other', 'yatra_booking', 'food_booking'
+    ]
   },
   
   // For refund transactions

@@ -93,7 +93,7 @@ const yatraBookingSchema = new mongoose.Schema({
     type: String,
     length: 6
   }
-}, { timestamps: true });
+}, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 
 // Virtual: booking reference
 yatraBookingSchema.virtual('bookingRef').get(function () {

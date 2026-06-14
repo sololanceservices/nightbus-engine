@@ -63,6 +63,13 @@ const yatraPackageSchema = new mongoose.Schema({
     landmark: String,
     time: String // "05:00 AM"
   },
+  pickupPoints: {
+    type: [{
+      address: { type: String, required: true },
+      time: { type: String, required: true }
+    }],
+    default: []
+  },
   destinationCity: {
     type: String,
     required: true,

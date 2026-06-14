@@ -56,7 +56,7 @@ exports.createPackage = async (req, res) => {
       busId, title, description, category, highlights,
       startDate, endDate, departurePoint, destinationCity, itinerary,
       inclusions, exclusions, pricePerPerson, totalSeats,
-      contactPhone, images
+      contactPhone, images, pickupPoints
     } = req.body;
 
     // Validate bus ownership
@@ -83,6 +83,7 @@ exports.createPackage = async (req, res) => {
       startDate,
       endDate,
       departurePoint,
+      pickupPoints: pickupPoints || [],
       itinerary: itinerary || [],
       inclusions: inclusions || [],
       exclusions: exclusions || [],
@@ -135,7 +136,7 @@ exports.updatePackage = async (req, res) => {
 
     const allowed = [
       'busId', 'title', 'description', 'highlights', 'startDate', 'endDate',
-      'departurePoint', 'destinationCity', 'itinerary', 'inclusions', 'exclusions', 
+      'departurePoint', 'pickupPoints', 'destinationCity', 'itinerary', 'inclusions', 'exclusions', 
       'pricePerPerson', 'totalSeats', 'contactPhone', 'images', 'status', 'category'
     ];
 

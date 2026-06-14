@@ -752,7 +752,7 @@ exports.getOwnerStaff = async (req, res) => {
 exports.createStaff = async (req, res) => {
   try {
     const ownerId = req.userId;
-    const { name, phone, email, password, staffRole, assignedBus, permissions } = req.body;
+    const { name, phone, email, password, staffRole, assignedBus, permissions, salary, licenseNumber } = req.body;
 
     // 1. Check if user already exists
     const existingUser = await User.findOne({ phone });
@@ -772,6 +772,8 @@ exports.createStaff = async (req, res) => {
       staffRole,
       assignedBus,
       permissions,
+      salary: salary || 0,
+      licenseNumber: licenseNumber || undefined,
       isActive: true
     });
 

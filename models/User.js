@@ -104,6 +104,14 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Bus'
   },
+  salary: {
+    type: Number,
+    default: 0
+  },
+  licenseNumber: {
+    type: String,
+    trim: true
+  },
   permissions: {
     type: Map,
     of: Boolean,

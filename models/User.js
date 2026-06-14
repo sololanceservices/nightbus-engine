@@ -64,6 +64,7 @@ const userSchema = new mongoose.Schema({
   companyProfile: {
     companyName: String,
     gstin: String,
+    fssaiNumber: String,
     address: String,
     businessType: String,
     fleetSize: Number,

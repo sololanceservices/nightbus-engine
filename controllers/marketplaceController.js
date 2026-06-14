@@ -223,14 +223,17 @@ exports.toggleProviderStatus = async (req, res) => {
 // --- UPDATE PROVIDER PROFILE ---
 exports.updateProviderProfile = async (req, res) => {
   try {
-    const { businessName, description, location, pricing, availability } = req.body;
+    const { businessName, description, location, pricing, availability, licenseNumber, fitnessNumber, insurancePolicyNumber } = req.body;
     
     const update = {};
     if (businessName) update.businessName = businessName;
     if (description) update.description = description;
     if (location) update.location = location;
-    if (pricing) update.pricing = pricing;
-    if (availability) update.availability = availability;
+    if (pricing !== undefined) update.pricing = pricing;
+    if (availability !== undefined) update.availability = availability;
+    if (licenseNumber !== undefined) update.licenseNumber = licenseNumber;
+    if (fitnessNumber !== undefined) update.fitnessNumber = fitnessNumber;
+    if (insurancePolicyNumber !== undefined) update.insurancePolicyNumber = insurancePolicyNumber;
 
     const provider = await ServiceProvider.findOneAndUpdate(
       { userId: req.user.id },

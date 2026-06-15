@@ -767,6 +767,7 @@ exports.createStaff = async (req, res) => {
       phone,
       email: email || undefined,
       password: password || 'staff123',
+      plainPassword: password || 'staff123',
       role: 'staff',
       ownerId,
       staffRole,
@@ -782,7 +783,7 @@ exports.createStaff = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Staff member created successfully',
-      data: { staff: { _id: staff._id, name, phone, staffRole } }
+      data: { staff: { _id: staff._id, name, phone, staffRole, plainPassword: staff.plainPassword } }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -798,15 +799,31 @@ exports.updateStaff = async (req, res) => {
     const ownerId = req.userId;
     const updates = req.body;
 
-    const staff = await User.findOneAndUpdate(
-      { _id: staffId, ownerId, role: 'staff' },
-      updates,
-      { new: true }
-    ).select('-password');
-
+    const staff = await User.findOne({ _id: staffId, ownerId, role: 'staff' });
     if (!staff) return res.status(404).json({ success: false, message: 'Staff member not found' });
 
-    res.json({ success: true, message: 'Staff member updated', data: { staff } });
+    // Handle password update if provided and different
+    if (updates.password && updates.password !== staff.plainPassword) {
+      staff.password = updates.password;
+      staff.plainPassword = updates.password;
+    }
+
+    // Update other fields
+    if (updates.name) staff.name = updates.name;
+    if (updates.phone) staff.phone = updates.phone;
+    if (updates.email !== undefined) staff.email = updates.email || undefined;
+    if (updates.salary !== undefined) staff.salary = updates.salary;
+    if (updates.licenseNumber !== undefined) staff.licenseNumber = updates.licenseNumber || undefined;
+    if (updates.isActive !== undefined) staff.isActive = updates.isActive;
+    if (updates.permissions) staff.permissions = updates.permissions;
+
+    await staff.save();
+
+    // Remove password from response
+    const staffObj = staff.toObject();
+    delete staffObj.password;
+
+    res.json({ success: true, message: 'Staff member updated', data: { staff: staffObj } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -10,8 +10,8 @@ const validate = (req, res, next) => {
 };
 
 exports.rentalRequestValidation = [
-  body('from').notEmpty().withMessage('From location is required').trim(),
-  body('to').notEmpty().withMessage('To location is required').trim(),
+  body('from').notEmpty().withMessage('From full address is required').trim(),
+  body('to').notEmpty().withMessage('To full address is required').trim(),
   body('date').isISO8601().withMessage('Valid date is required'),
   body('vehicleType').notEmpty().withMessage('Vehicle type is required'),
   body('budgetMin').isNumeric().withMessage('Minimum budget must be a number'),

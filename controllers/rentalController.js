@@ -4,6 +4,7 @@ const RentalService = require('../models/RentalService');
 const OwnerRouteConfig = require('../models/OwnerRouteConfig');
 const RentalMatch = require('../models/RentalMatch');
 const User = require('../models/User');
+const Location = require('../models/Location');
 const matchingService = require('../services/rentalMatchingService');
 const { getEquivalentVehicleTypes } = require('../utils/vehicleTypeMapper');
 
@@ -305,13 +306,53 @@ exports.getMatchingOwnersForCustomer = async (req, res) => {
     const endOfDay = new Date(request.date);
     endOfDay.setUTCHours(23, 59, 59, 999);
 
+    // Resolve city names from the full addresses
+    let fromCity = request.from;
+    let toCity = request.to;
+    
+    const allLocations = await Location.find({ isActive: true });
+    
+    let bestFromMatch = null;
+    for (const loc of allLocations) {
+      const escapedName = loc.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (new RegExp(`\\b${escapedName}\\b`, 'i').test(request.from)) {
+        if (!bestFromMatch || loc.name.length > bestFromMatch.name.length) {
+          bestFromMatch = loc;
+        }
+      }
+    }
+    if (bestFromMatch) fromCity = bestFromMatch.name;
+
+    let bestToMatch = null;
+    for (const loc of allLocations) {
+      const escapedName = loc.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (new RegExp(`\\b${escapedName}\\b`, 'i').test(request.to)) {
+        if (!bestToMatch || loc.name.length > bestToMatch.name.length) {
+          bestToMatch = loc;
+        }
+      }
+    }
+    if (bestToMatch) toCity = bestToMatch.name;
+
     const availability = await RentalService.find({
       availableDates: { $elemMatch: { $gte: startOfDay, $lte: endOfDay } }
     }).populate({
       path: 'routeConfigId',
       match: {
-        from: new RegExp(request.from, 'i'),
-        to: new RegExp(request.to, 'i'),
+        $and: [
+          {
+            $or: [
+              { from: new RegExp(request.from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+              { from: new RegExp(`^${fromCity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+            ]
+          },
+          {
+            $or: [
+              { to: new RegExp(request.to.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+              { to: new RegExp(`^${toCity.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+            ]
+          }
+        ],
         vehicleType: { $in: getEquivalentVehicleTypes(request.vehicleType) },
         priceMin: { $lte: request.budgetMax },
         priceMax: { $gte: request.budgetMin }

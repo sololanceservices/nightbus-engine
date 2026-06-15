@@ -112,6 +112,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  plainPassword: {
+    type: String
+  },
   permissions: {
     type: Map,
     of: Boolean,
@@ -119,6 +122,7 @@ const userSchema = new mongoose.Schema({
       'verify_ticket': true,
       'update_location': true,
       'manage_boarding': true,
+      'verify_drop': false,
       'op_controls': false,
       'view_manifest': true
     }

@@ -22,6 +22,29 @@ const getDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 /**
+ * Helper to resolve a Location object from a full address string
+ */
+const resolveLocationFromAddress = async (address, allLocations) => {
+  if (!address) return null;
+  const escapedAddress = address.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // First attempt: exact match
+  let matchedLoc = await Location.findOne({ name: new RegExp(`^${escapedAddress}$`, 'i') });
+  if (matchedLoc) return matchedLoc;
+
+  // Second attempt: substring match against active locations
+  let bestMatch = null;
+  for (const loc of allLocations) {
+    const escapedName = loc.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`\\b${escapedName}\\b`, 'i').test(address)) {
+      if (!bestMatch || loc.name.length > bestMatch.name.length) {
+        bestMatch = loc;
+      }
+    }
+  }
+  return bestMatch;
+};
+
+/**
  * Core matching engine to find matches for a rental request
  * Designed to be run proactively when a request is created.
  */
@@ -33,10 +56,9 @@ exports.matchRequestToOwners = async (requestId) => {
     console.log(`🔍 Running matching engine for request ${requestId} (${request.from} -> ${request.to})`);
 
     // 1. Get coordinates for request source/dest
-    const [fromLoc, toLoc] = await Promise.all([
-      Location.findOne({ name: new RegExp(`^${request.from}$`, 'i') }),
-      Location.findOne({ name: new RegExp(`^${request.to}$`, 'i') })
-    ]);
+    const allLocations = await Location.find({ isActive: true });
+    const fromLoc = await resolveLocationFromAddress(request.from, allLocations);
+    const toLoc = await resolveLocationFromAddress(request.to, allLocations);
 
     // 2. Query configurations (exact name match first, then proximity)
     const configs = await OwnerRouteConfig.find({
@@ -69,8 +91,10 @@ exports.matchRequestToOwners = async (requestId) => {
       let matchType = 'similarity';
 
       // City Name Similarity (Case-insensitive)
-      const fromMatch = cfg.from.toLowerCase() === request.from.toLowerCase();
-      const pathMatch = cfg.to.toLowerCase() === request.to.toLowerCase();
+      const fromMatch = cfg.from.toLowerCase() === request.from.toLowerCase() ||
+                        (fromLoc && cfg.from.toLowerCase() === fromLoc.name.toLowerCase());
+      const pathMatch = cfg.to.toLowerCase() === request.to.toLowerCase() ||
+                        (toLoc && cfg.to.toLowerCase() === toLoc.name.toLowerCase());
 
       if (fromMatch && pathMatch) {
         score = 1.0;

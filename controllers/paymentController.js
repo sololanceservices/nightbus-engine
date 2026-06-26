@@ -2,15 +2,16 @@ const crypto = require('crypto');
 const PaymentOrder = require('../models/PaymentOrder');
 const bookingService = require('../services/bookingService');
 const Payment = require('../models/Payment');
-const { Cashfree, CFEnvironment } = require('cashfree-pg');
+const Razorpay = require('razorpay');
 
-// Initialize Cashfree
-Cashfree.XClientId = process.env.CASHFREE_APP_ID;
-Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY;
-Cashfree.XEnvironment = process.env.CASHFREE_ENVIRONMENT === 'PRODUCTION' ? CFEnvironment.PRODUCTION : CFEnvironment.SANDBOX;
+// Initialize Razorpay
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 /**
- * Create a new Cashfree Order and store intent
+ * Create a new Razorpay Order and store intent
  */
 exports.createOrder = async (req, res) => {
   try {
@@ -21,28 +22,20 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Amount and bookingData are required' });
     }
 
-    const orderId = receipt || `order_${Date.now()}_${Math.random().toString(36).substring(2,7)}`;
+    const orderReceipt = receipt || `order_${Date.now()}_${Math.random().toString(36).substring(2,7)}`;
 
-    // 1. Create order in Cashfree
-    const request = {
-        "order_amount": amount,
-        "order_currency": "INR",
-        "order_id": orderId,
-        "customer_details": {
-            "customer_id": userId.toString(),
-            "customer_phone": "9999999999", // Should be provided by frontend ideally
-            "customer_email": "user@warrol.com"
-        },
-        "order_meta": {
-            "return_url": `${process.env.API_URL || 'http://localhost:5000'}/api/payment/verify?order_id={order_id}`
-        }
+    // 1. Create order in Razorpay
+    const options = {
+      amount: Math.round(amount * 100),  // amount in the smallest currency unit
+      currency: "INR",
+      receipt: orderReceipt
     };
 
-    const response = await Cashfree.PGCreateOrder("2023-08-01", request);
+    const order = await razorpay.orders.create(options);
 
     // 2. Save intent to PaymentOrder for Webhook recovery
     await PaymentOrder.create({
-      cashfreeOrderId: orderId,
+      razorpayOrderId: order.id,
       userId,
       bookingData,
       status: 'pending'
@@ -50,32 +43,45 @@ exports.createOrder = async (req, res) => {
 
     res.json({
       success: true,
-      order: response.data,
-      payment_session_id: response.data.payment_session_id,
-      order_id: response.data.order_id
+      order: order,
+      order_id: order.id,
+      amount: order.amount,
+      currency: order.currency
     });
   } catch (error) {
-    console.error('[CREATE ORDER ERROR]', error.response?.data || error.message);
-    res.status(500).json({ success: false, message: error.response?.data?.message || error.message });
+    console.error('[CREATE ORDER ERROR]', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 /**
- * Cashfree Webhook Handler
+ * Razorpay Webhook Handler
  */
 exports.handleWebhook = async (req, res) => {
   try {
-    // For proper Cashfree webhook verification, you need rawBody.
-    // Assuming simple processing for now.
-    const event = req.body.type;
-    console.log(`[WEBHOOK] Received Cashfree event: ${event}`);
+    // Verify Razorpay webhook signature
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET; // Ensure you have this in .env if using webhooks
+    const signature = req.headers['x-razorpay-signature'];
+    
+    // Validate signature
+    const expectedSignature = crypto.createHmac('sha256', secret)
+                                    .update(JSON.stringify(req.body))
+                                    .digest('hex');
 
-    if (event === 'PAYMENT_SUCCESS_WEBHOOK') {
-      const orderId = req.body.data.order.order_id;
-      const paymentId = req.body.data.payment.cf_payment_id;
+    if (expectedSignature !== signature) {
+        return res.status(400).json({ status: 'error', message: 'Invalid signature' });
+    }
+
+    const event = req.body.event;
+    console.log(`[WEBHOOK] Received Razorpay event: ${event}`);
+
+    if (event === 'order.paid') {
+      const paymentEntity = req.body.payload.payment.entity;
+      const orderId = paymentEntity.order_id;
+      const paymentId = paymentEntity.id;
 
       // Find the associated PaymentOrder
-      const paymentOrder = await PaymentOrder.findOne({ cashfreeOrderId: orderId });
+      const paymentOrder = await PaymentOrder.findOne({ razorpayOrderId: orderId });
       
       if (!paymentOrder) {
         console.warn(`[WEBHOOK] No PaymentOrder found for orderId: ${orderId}.`);
@@ -91,8 +97,8 @@ exports.handleWebhook = async (req, res) => {
         userId: paymentOrder.userId,
         bookingData: paymentOrder.bookingData,
         paymentDetails: {
-          cashfree_order_id: orderId,
-          cashfree_payment_id: paymentId.toString()
+          razorpay_order_id: orderId,
+          razorpay_payment_id: paymentId.toString()
         },
         paymentOrder
       });
@@ -108,22 +114,21 @@ exports.handleWebhook = async (req, res) => {
 };
 
 /**
- * Verify Cashfree Payment (Client-side confirmation)
+ * Verify Razorpay Payment (Client-side confirmation)
  */
 exports.verifyPayment = async (req, res) => {
     try {
-        const { order_id, bookingData } = req.body;
+        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingData } = req.body;
         const userId = req.userId || req.user?._id || req.user?.id;
 
-        // Fetch order payments from Cashfree to verify status securely
-        const response = await Cashfree.PGOrderFetchPayments("2023-08-01", order_id);
-        const payments = response.data;
-        
-        // Find the successful payment if any
-        const successfulPayment = payments.find(p => p.payment_status === 'SUCCESS');
+        // Verify signature
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+                                        .update(body.toString())
+                                        .digest('hex');
 
-        if (!successfulPayment) {
-            return res.status(400).json({ success: false, message: 'Payment not successful or pending' });
+        if (expectedSignature !== razorpay_signature) {
+             return res.status(400).json({ success: false, message: 'Invalid payment signature' });
         }
 
         // Finalize the booking idempotently
@@ -131,14 +136,14 @@ exports.verifyPayment = async (req, res) => {
             userId,
             bookingData,
             paymentDetails: { 
-                cashfree_order_id: order_id, 
-                cashfree_payment_id: successfulPayment.cf_payment_id.toString() 
+                razorpay_order_id: razorpay_order_id, 
+                razorpay_payment_id: razorpay_payment_id 
             }
         });
 
         res.json(result);
     } catch (error) {
-        console.error('[VERIFY PAYMENT ERROR]', error.response?.data || error.message);
+        console.error('[VERIFY PAYMENT ERROR]', error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

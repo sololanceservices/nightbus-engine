@@ -815,7 +815,10 @@ exports.updateStaff = async (req, res) => {
     if (updates.salary !== undefined) staff.salary = updates.salary;
     if (updates.licenseNumber !== undefined) staff.licenseNumber = updates.licenseNumber || undefined;
     if (updates.isActive !== undefined) staff.isActive = updates.isActive;
-    if (updates.permissions) staff.permissions = updates.permissions;
+    if (updates.permissions) {
+      staff.set('permissions', updates.permissions);
+      staff.markModified('permissions');
+    }
 
     await staff.save();
 

@@ -23,11 +23,11 @@ const paymentSchema = new mongoose.Schema({
   taxes: Number,
   gateway: {
     type: String,
-    enum: ["cashfree", "stripe", "paypal", "cash", "wallet", "test"],
-    default: "cashfree"
+    enum: ["razorpay", "cashfree", "stripe", "paypal", "cash", "wallet", "test"],
+    default: "razorpay"
   },
-  gatewayId: String, // Cashfree payment_id
-  orderId: String,   // Cashfree order_id
+  gatewayId: String, // Razorpay payment_id
+  orderId: String,   // Razorpay order_id
   status: {
     type: String,
     enum: ["pending", "authorized", "captured", "failed", "refunded"],

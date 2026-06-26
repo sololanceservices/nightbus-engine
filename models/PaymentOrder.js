@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 const paymentOrderSchema = new mongoose.Schema({
-  cashfreeOrderId: {
+  razorpayOrderId: {
     type: String,
     required: true,
     unique: true,

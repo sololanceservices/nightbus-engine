@@ -26,7 +26,7 @@ const refundSchema = new mongoose.Schema({
     enum: ["pending", "initiated", "completed", "failed", "rejected"],
     default: "pending"
   },
-  gatewayRefId: String, // Cashfree refund_id
+  gatewayRefId: String, // Razorpay refund_id
   gatewayStatus: String,
   processedAt: Date,
   notes: String,

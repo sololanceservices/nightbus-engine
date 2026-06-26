@@ -31,13 +31,13 @@ exports.finalizeBooking = async ({
         console.log(`[BOOKING SERVICE] Finalizing booking for user: ${userId} (Sessions: ${!!session})`);
 
         const { segments, totalAmount, platformFee, taxes, paymentMethod, promoCode } = bookingData;
-        const { cashfree_payment_id, cashfree_order_id } = paymentDetails;
+        const { razorpay_payment_id, razorpay_order_id } = paymentDetails;
 
         // 1. Idempotency Check: See if this payment_id has already been used
-        const existingPayment = await Payment.findOne({ gatewayId: cashfree_payment_id });
+        const existingPayment = await Payment.findOne({ gatewayId: razorpay_payment_id });
         if (existingPayment && existingPayment.status === 'captured') {
             const existingJourney = await Journey.findById(existingPayment.bookingId).populate('segments');
-            console.log(`[BOOKING SERVICE] Payment ${cashfree_payment_id} already processed. Returning existing journey.`);
+            console.log(`[BOOKING SERVICE] Payment ${razorpay_payment_id} already processed. Returning existing journey.`);
             if (session) {
                 await session.abortTransaction();
                 session.endSession();
@@ -100,11 +100,11 @@ exports.finalizeBooking = async ({
             userId,
             bookingId: journey._id,
             amount: totalAmount,
-            method: paymentMethod === 'cashfree' ? 'card' : paymentMethod, // Default to card if cashfree
-            gateway: 'cashfree',
+            method: paymentMethod === 'razorpay' ? 'card' : paymentMethod, // Default to card if razorpay
+            gateway: 'razorpay',
             status: 'captured',
-            gatewayId: cashfree_payment_id,
-            orderId: cashfree_order_id
+            gatewayId: razorpay_payment_id,
+            orderId: razorpay_order_id
         }], { session });
 
         journey.paymentId = payment[0]._id;
@@ -167,7 +167,7 @@ exports.finalizeBooking = async ({
         // 6. Update PaymentOrder if passed
         if (paymentOrder) {
             paymentOrder.status = 'completed';
-            paymentOrder.paymentId = cashfree_payment_id;
+            paymentOrder.paymentId = razorpay_payment_id;
             await paymentOrder.save({ session });
         }
 
@@ -251,8 +251,8 @@ exports.finalizeWalletBooking = async ({ userId, bookingData }) => {
         userId,
         bookingData,
         paymentDetails: {
-            cashfree_payment_id: result.transaction._id.toString(),
-            cashfree_order_id: 'WALLET_PAYMENT'
+            razorpay_payment_id: result.transaction._id.toString(),
+            razorpay_order_id: 'WALLET_PAYMENT'
         }
     });
 };

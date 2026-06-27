@@ -44,8 +44,24 @@ mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
-
-  .then(() => console.log('✅ MongoDB Connected'))
+  .then(async () => {
+    console.log('✅ MongoDB Connected');
+    try {
+      const db = mongoose.connection.db;
+      const collections = await db.listCollections({ name: 'paymentorders' }).toArray();
+      if (collections.length > 0) {
+        const collection = db.collection('paymentorders');
+        const indexes = await collection.indexes();
+        if (indexes.some(idx => idx.name === 'cashfreeOrderId_1')) {
+          console.log('🧹 Found obsolete index cashfreeOrderId_1 on paymentorders. Dropping...');
+          await collection.dropIndex('cashfreeOrderId_1');
+          console.log('✅ Obsolete index cashfreeOrderId_1 dropped successfully.');
+        }
+      }
+    } catch (err) {
+      console.warn('⚠️ Warning: Failed to drop obsolete cashfreeOrderId_1 index:', err.message);
+    }
+  })
   .catch(err => console.error('❌ MongoDB Error:', err));
 
 // Socket.io - Real-time updates

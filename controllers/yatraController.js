@@ -206,7 +206,10 @@ exports.listPackages = async (req, res) => {
   try {
     const { category, city } = req.query;
 
-    const query = { status: 'active' };
+    const query = { 
+      status: 'active',
+      startDate: { $gte: new Date() }
+    };
 
     if (category) {
       query.category = category;
@@ -241,6 +244,9 @@ exports.getPackageDetails = async (req, res) => {
     if (!['active', 'full'].includes(pkg.status)) {
       return res.status(404).json({ success: false, message: 'Package not available' });
     }
+    if (pkg.startDate < new Date()) {
+      return res.status(400).json({ success: false, message: 'This Yatra has already departed/started' });
+    }
 
     res.json({ success: true, data: pkg });
   } catch (error) {
@@ -266,6 +272,9 @@ exports.bookPackage = async (req, res) => {
     if (!pkg) return res.status(404).json({ success: false, message: 'Package not found' });
     if (pkg.status !== 'active') {
       return res.status(400).json({ success: false, message: `Package is ${pkg.status}, cannot book` });
+    }
+    if (pkg.startDate < new Date()) {
+      return res.status(400).json({ success: false, message: 'This Yatra has already departed/started, bookings are closed' });
     }
 
     const seatsRequested = passengers.length;

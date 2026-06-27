@@ -33,6 +33,15 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/bus_ap
 async function runAudit() {
     try {
         await mongoose.connect(MONGODB_URI);
+        
+        // Clean up legacy test data to avoid index conflicts
+        const oldUsers = await User.find({ name: { $in: ['Audit Customer', 'Audit Owner', 'Audit Staff', 'Scale Customer', 'Scale Owner', 'Upgraded Vendor User'] } }, '_id');
+        const oldUserIds = oldUsers.map(u => u._id);
+        await Segment.deleteMany({ customerId: { $in: oldUserIds } });
+        await Journey.deleteMany({ customerId: { $in: oldUserIds } });
+        await Segment.deleteMany({ seatNumber: { $in: ['A10', 'B10', 'A1', 'V1', 'Z9'] } });
+
+        await mongoose.model('Segment').syncIndexes();
         console.log('🛡️ [PRODUCTION AUDIT] Initializing End-to-End Verification...\n');
 
         // --- PHASE 1: SETUP TEST DATA ---

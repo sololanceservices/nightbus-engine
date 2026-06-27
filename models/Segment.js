@@ -277,7 +277,15 @@ segmentSchema.index({ journeyId: 1, status: 1 });
 segmentSchema.index({ busId: 1, travelDate: 1, status: 1 });
 segmentSchema.index({ routeId: 1, travelDate: 1, roundStartTime: 1 });
 segmentSchema.index({ customerId: 1, status: 1 });
-segmentSchema.index({ seatNumber: 1, busId: 1, travelDate: 1, roundStartTime: 1 });
+segmentSchema.index(
+  { seatNumber: 1, busId: 1, travelDate: 1, roundStartTime: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      status: { $in: ['confirmed', 'boarded', 'requested', 'pending_approval'] }
+    }
+  }
+);
 segmentSchema.index({ status: 1, travelDate: 1 });
 segmentSchema.index({ 'boardedBy.staffId': 1 });
 

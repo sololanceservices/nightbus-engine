@@ -4,6 +4,9 @@ const FoodItem = require('../models/FoodItem');
 const FoodOrder = require('../models/FoodOrder');
 const User = require('../models/User');
 const Wallet = require('../models/Wallet');
+const Journey = require('../models/Journey');
+const Segment = require('../models/Segment');
+const Route = require('../models/Route');
 const walletController = require('./walletController');
 const fs = require('fs');
 const path = require('path');
@@ -14,7 +17,7 @@ const DELIVERY_BUFFER_MINUTES = 5;
 
 exports.getVendors = async (req, res) => {
   try {
-    const { mode, lat, lng, journeyETA, city, fromRoute, toRoute } = req.query;
+    const { mode, lat, lng, journeyETA, city, fromRoute, toRoute, journeyId } = req.query;
     
     // Advanced matching query
     let query = {};
@@ -25,6 +28,45 @@ exports.getVendors = async (req, res) => {
         { 'serviceAreas.city': { $regex: city, $options: 'i' } },
         { name: { $regex: city, $options: 'i' } } // Fallback for specific shop name search
       ];
+    }
+
+    let intermediateStops = [];
+    if (journeyId) {
+      try {
+        const journey = await Journey.findById(journeyId).populate('segments');
+        if (journey && journey.segments.length > 0) {
+          const segment = await Segment.findById(journey.segments[0]._id).populate('routeId');
+          if (segment && segment.routeId) {
+            const route = segment.routeId;
+            const fromStopName = segment.fromStop.name;
+            const toStopName = segment.toStop.name;
+            
+            let fromIndex = route.stops.findIndex(s => s.name.toLowerCase() === fromStopName.toLowerCase());
+            let toIndex = route.stops.findIndex(s => s.name.toLowerCase() === toStopName.toLowerCase());
+            
+            if (fromIndex !== -1 && toIndex !== -1) {
+              if (fromIndex > toIndex) {
+                 const temp = fromIndex;
+                 fromIndex = toIndex;
+                 toIndex = temp;
+              }
+              for (let i = fromIndex; i <= toIndex; i++) {
+                intermediateStops.push(route.stops[i].name);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error extracting intermediate stops", err);
+      }
+    }
+
+    if (intermediateStops.length > 0) {
+       if (!query.$or) query.$or = [];
+       const regexStops = intermediateStops.map(s => new RegExp(`^${s}$`, 'i'));
+       query.$or.push({ 'serviceAreas.city': { $in: regexStops } });
+       // Also allow if vendor name matches intermediate stop (fallback)
+       query.$or.push({ name: { $in: regexStops } });
     }
 
     // Match by routes (if applicable)
@@ -281,7 +323,7 @@ exports.toggleFoodVendorStatus = async (req, res) => {
 
 exports.createOrder = async (req, res) => {
   try {
-    const { vendorId, items, deliveryLocation, journeyId, orderMode, targetDeliveryTime } = req.body;
+    const { vendorId, items, deliveryLocation, journeyId, orderMode, targetDeliveryTime, pnrNumber } = req.body;
     
     let totalAmount = 0;
     const processedItems = items.map(i => {
@@ -309,6 +351,7 @@ exports.createOrder = async (req, res) => {
       orderMode: orderMode || 'normal',
       targetDeliveryTime,
       deliveryOtp, // newly added
+      pnrNumber, // mapped from request
       paymentStatus: 'pending'
     });
 

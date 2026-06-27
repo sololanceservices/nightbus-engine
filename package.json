@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "seed": "node seeds/seedUsers.js",
-    "test": "node test-auth.js"
+    "test": "node test-auth.js",
+    "audit-prod": "node scripts/productionReadinessAudit.js && node scripts/scaleVerificationSuite.js"
   },
   "keywords": [],
   "author": "",

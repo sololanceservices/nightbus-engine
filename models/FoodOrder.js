@@ -69,7 +69,8 @@ const foodOrderSchema = new mongoose.Schema({
     enum: ['pending', 'paid', 'refunded', 'settled'],
     default: 'pending'
   },
-  notes: String
+  notes: String,
+  pnrNumber: String // PNR linked to this order for vendor tracking
 }, { timestamps: true });
 
 module.exports = mongoose.model('FoodOrder', foodOrderSchema);

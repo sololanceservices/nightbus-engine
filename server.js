@@ -114,6 +114,10 @@ app.get('/test-auth', (req, res) => {
   res.sendFile(__dirname + '/public/auth-test.html');
 });
 
+app.get('/health', (req, res) => {
+  res.json({ success: true, status: 'OK', timestamp: Date.now() });
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({

@@ -1,8 +1,43 @@
 // ==================== controllers/staffController.js ====================
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const TripTimeline = require('../models/TripTimeline');
 const Segment = require('../models/Segment');
 const Bus = require('../models/Bus');
+
+const resolveSegment = async (segmentId) => {
+  if (!segmentId) return null;
+  
+  if (mongoose.Types.ObjectId.isValid(segmentId)) {
+    return await Segment.findById(segmentId);
+  }
+  
+  // Clean query (e.g. BKABC123 -> abc123)
+  const cleanId = segmentId.replace(/^(BK|YTR|#)/i, '').trim().toLowerCase();
+  if (cleanId.length === 6) {
+    return await Segment.findOne({
+      $or: [
+        {
+          $expr: {
+            $eq: [
+              { $substrCP: [ { $toString: "$_id" }, 18, 6 ] },
+              cleanId
+            ]
+          }
+        },
+        {
+          $expr: {
+            $eq: [
+              { $substrCP: [ { $toString: "$journeyId" }, 18, 6 ] },
+              cleanId
+            ]
+          }
+        }
+      ]
+    });
+  }
+  return null;
+};
 
 /**
  * Get active trip for the staff member
@@ -55,7 +90,7 @@ exports.verifyBoarding = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Insufficient permission to verify tickets' });
     }
 
-    const segment = await Segment.findById(segmentId);
+    const segment = await resolveSegment(segmentId);
     if (!segment) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
@@ -107,7 +142,7 @@ exports.verifyDrop = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Insufficient permission to verify drop-off' });
     }
 
-    const segment = await Segment.findById(segmentId);
+    const segment = await resolveSegment(segmentId);
     if (!segment) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }

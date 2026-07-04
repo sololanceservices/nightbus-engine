@@ -621,6 +621,64 @@ exports.getWalletStats = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Request a payout from wallet balance to bank account (Settlement)
+ * @route   POST /api/wallet/payout-request
+ * @access  Private (Vendors / Owners)
+ */
+exports.requestPayout = async (req, res) => {
+  try {
+    const userId = req.userId || req.user?._id;
+    const { amount, bankDetails } = req.body;
+    const Settlement = require('../models/Settlement');
+
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'Invalid amount' });
+    }
+
+    // 1. Verify wallet balance
+    const wallet = await Wallet.getOrCreate(userId);
+    if (wallet.balance < numAmount) {
+      return res.status(400).json({ success: false, message: 'Insufficient wallet balance' });
+    }
+
+    // 2. Deduct money from wallet (locks the funds under payout purpose)
+    const transactionId = `PAYOUT_REQ_${Date.now()}`;
+    await exports.deductMoney(userId, numAmount, {
+      purpose: 'withdrawal',
+      description: `Payout request of ₹${numAmount.toFixed(2)} to ${bankDetails || 'bank account'}`,
+      transactionId
+    });
+
+    // 3. Create the Settlement record
+    const settlement = new Settlement({
+      ownerId: userId,
+      amount: numAmount,
+      status: 'pending',
+      notes: bankDetails || 'Food Vendor Payout Request',
+      metadata: {
+        type: 'food_vendor',
+        transactionId
+      }
+    });
+    await settlement.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Payout request sent to Admin successfully',
+      settlement
+    });
+
+  } catch (error) {
+    console.error('❌ [PAYOUT REQUEST ERROR]', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to process payout request'
+    });
+  }
+};
+
 // Export rate limiters with controllers
 module.exports = {
   getWallet: exports.getWallet,
@@ -631,6 +689,7 @@ module.exports = {
   checkBalance: exports.checkBalance,
   transferMoney: exports.transferMoney,
   getWalletStats: exports.getWalletStats,
+  requestPayout: exports.requestPayout,
   
   // Rate limiters
   addMoneyLimiter,

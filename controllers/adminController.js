@@ -290,22 +290,35 @@ exports.updateSettlementStatus = async (req, res) => {
     const { id } = req.params;
     const { status, transactionId, notes } = req.body;
     
-    const settlement = await Settlement.findByIdAndUpdate(
-      id, 
-      { 
-        status, 
-        transactionId, 
-        notes,
-        processedBy: req.userId,
-        paidAt: status === 'paid' ? new Date() : undefined
-      }, 
-      { new: true }
-    );
-    
+    const settlement = await Settlement.findById(id);
     if (!settlement) return res.status(404).json({ success: false, message: 'Settlement not found' });
+
+    if (settlement.status === 'cancelled' || settlement.status === 'paid') {
+      return res.status(400).json({ success: false, message: 'Settlement is already finalized' });
+    }
+
+    if (status === 'cancelled') {
+      const Wallet = require('../models/Wallet');
+      await Wallet.atomicCredit(settlement.ownerId, settlement.amount, {
+        transactionId: `PAYOUT_REJ_${settlement._id.toString()}`,
+        source: 'money_added',
+        description: `Refund: Payout request of ₹${settlement.amount} rejected by admin`
+      });
+    }
+
+    settlement.status = status;
+    if (transactionId) settlement.transactionId = transactionId;
+    if (notes) settlement.notes = notes;
+    settlement.processedBy = req.userId;
+    if (status === 'paid') {
+      settlement.paidAt = new Date();
+    }
+
+    await settlement.save();
     
     res.status(200).json({ success: true, message: 'Settlement updated', settlement });
   } catch (error) {
+    console.error('Update Settlement Status Error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

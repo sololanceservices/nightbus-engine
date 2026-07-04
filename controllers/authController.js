@@ -416,28 +416,35 @@ exports.testLogin = async (req, res) => {
     }
 
     // Validate role
-    const validRoles = ['customer', 'owner', 'staff', 'vendor', 'admin'];
-    const userRole = validRoles.includes(role) ? role : 'customer';
+    const validRoles = ['customer', 'owner', 'staff', 'vendor', 'admin', 'provider'];
+    const resolvedRole = validRoles.includes(role) ? role : 'customer';
+    const dbRole = resolvedRole === 'provider' ? 'customer' : resolvedRole;
 
     // Find or create user
     let user = await User.findOne({ phone });
     if (!user) {
       user = new User({
         phone,
-        name: `Test ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`,
-        role: userRole,
-        isVerified: true
+        name: `Test ${resolvedRole.charAt(0).toUpperCase() + resolvedRole.slice(1)}`,
+        role: dbRole,
+        isVerified: true,
+        isServiceProvider: resolvedRole === 'provider',
+        serviceType: resolvedRole === 'provider' ? 'Driver' : undefined
       });
       await user.save();
-      console.log(`✅ Test user created: ${user.name} (${user.role})`);
+      console.log(`✅ Test user created: ${user.name} (${user.role}), isServiceProvider: ${user.isServiceProvider}`);
     } else {
       // Update role if provided
       if (role && validRoles.includes(role)) {
-        user.role = role;
+        user.role = dbRole;
+        if (resolvedRole === 'provider') {
+          user.isServiceProvider = true;
+          if (!user.serviceType) user.serviceType = 'Driver';
+        }
         user.isVerified = true;
         await user.save();
       }
-      console.log(`✅ Test user logged in: ${user.name} (${user.role})`);
+      console.log(`✅ Test user logged in: ${user.name} (${user.role}), isServiceProvider: ${user.isServiceProvider}`);
     }
 
     // Generate token

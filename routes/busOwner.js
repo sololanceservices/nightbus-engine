@@ -42,6 +42,7 @@ router.delete('/routes/:routeId', busOwnerController.deleteRoute);
 router.get('/pending-approvals', busOwnerController.getPendingApprovals);
 router.put('/segments/:segmentId/approve', busOwnerController.approveBooking);
 router.put('/segments/:segmentId/reject', busOwnerController.rejectBooking);
+router.get('/buses/:busId/bookings/date/:date', busOwnerController.getBusBookingsByDate);
 
 // ==================== STAFF MANAGEMENT ====================
 router.get('/staff', busOwnerController.getOwnerStaff);

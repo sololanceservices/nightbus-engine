@@ -581,8 +581,32 @@ exports.updateRouteStops = async (req, res) => {
 exports.getPendingApprovals = async (req, res) => {
   try {
     const ownerId = req.userId;
+    const { status = 'pending' } = req.query;
 
-    const segments = await Segment.getPendingApprovals(ownerId);
+    const Bus = require('../models/Bus');
+    const Segment = require('../models/Segment');
+
+    const buses = await Bus.find({ ownerId }, '_id');
+    const busIds = buses.map(b => b._id);
+
+    let query = {
+      busId: { $in: busIds }
+    };
+
+    if (status === 'pending') {
+      query.status = { $in: ['requested', 'pending_approval'] };
+      query.approvalStatus = 'pending';
+    } else if (status === 'confirmed') {
+      query.status = { $in: ['confirmed', 'boarded', 'in_transit', 'completed'] };
+    } else if (status === 'rejected') {
+      query.status = 'rejected';
+    }
+
+    const segments = await Segment.find(query)
+      .populate('customerId', 'name phone')
+      .populate('busId', 'chassisNumber busType busNumber')
+      .populate('routeId', 'routeName')
+      .sort('-createdAt');
 
     res.json({
       success: true,
@@ -1211,6 +1235,60 @@ exports.sendTripAnnouncement = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Trip announcement error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * Get bus bookings by specific date
+ */
+exports.getBusBookingsByDate = async (req, res) => {
+  try {
+    const { busId, date } = req.params;
+    const ownerId = req.userId;
+
+    // 1. Verify bus belongs to owner
+    const bus = await Bus.findOne({ _id: busId, ownerId });
+    if (!bus) {
+      return res.status(404).json({ success: false, message: 'Bus not found or unauthorized' });
+    }
+
+    // Parse date range (start of day to end of day)
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 1);
+
+    // Query segments for this bus on this date
+    const segments = await Segment.find({
+      busId,
+      travelDate: { $gte: startDate, $lt: endDate }
+    })
+      .populate('customerId', 'name phone')
+      .populate('routeId', 'routeName stops')
+      .sort('departureTime');
+
+    // Also get the routes running on this day to show all scheduled runs
+    const routes = await Route.find({ busId, isActive: true })
+      .populate('busId', 'busNumber busType');
+
+    res.json({
+      success: true,
+      data: {
+        date,
+        bus: {
+          _id: bus._id,
+          busName: bus.busName,
+          busNumber: bus.busNumber,
+          totalSeats: bus.totalSeats
+        },
+        segments,
+        routes
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Get bus bookings by date error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

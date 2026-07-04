@@ -72,4 +72,11 @@ router.post(
   walletController.transferMoney
 );
 
+/**
+ * @route   POST /api/wallet/payout-request
+ * @desc    Request payout to bank details
+ * @access  Private
+ */
+router.post('/payout-request', walletController.requestPayout);
+
 module.exports = router;

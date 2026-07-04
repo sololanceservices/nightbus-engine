@@ -206,8 +206,6 @@ exports.sendBookingNotifications = async (journey, userId) => {
         });
 
         // Owners Notifications
-        const populatedSegments = await Segment.findByIds(journey.segments).populate('busId'); // Assuming helper exists or use find
-        // ... (truncated for brevity, implementation continues below)
         const segments = await Segment.find({ _id: { $in: journey.segments } }).populate('busId');
 
         for (const seg of segments) {

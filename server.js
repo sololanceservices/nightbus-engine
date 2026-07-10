@@ -121,7 +121,7 @@ app.use('/api/reviews', require('./routes/reviewRoutes'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
 app.use('/api/home-content', require('./routes/homeContentRoutes'));
 
-// Share link fallback routes
+// Share link fallback routes (Trigger Nodemon Reload)
 app.use('/share', require('./routes/shareRoutes'));
 
 // Test page (temporary)

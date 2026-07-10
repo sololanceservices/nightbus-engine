@@ -141,7 +141,7 @@ exports.getFoodVendorProfile = async (req, res) => {
 
 exports.registerFoodVendor = async (req, res) => {
   try {
-    const { name, location, deliveryRadius, avgDeliveryTime, serviceAreas, routes, availableHours, fssaiNumber, gstNumber } = req.body;
+    const { name, location, deliveryRadius, avgDeliveryTime, serviceAreas, routes, availableHours, fssaiNumber, gstNumber, bankName, bankAccountNumber, bankIfscCode, bankAccountHolderName, upiId } = req.body;
     
     // Mandatory verification check: at least one of FSSAI or GST must be provided
     if (!fssaiNumber && !gstNumber) {
@@ -191,7 +191,12 @@ exports.registerFoodVendor = async (req, res) => {
       routes,
       availableHours,
       fssaiNumber: fssaiNumber ? fssaiNumber.trim() : undefined,
-      gstNumber: gstNumber ? gstNumber.trim().toUpperCase() : undefined
+      gstNumber: gstNumber ? gstNumber.trim().toUpperCase() : undefined,
+      bankName: bankName ? bankName.trim() : undefined,
+      bankAccountNumber: bankAccountNumber ? bankAccountNumber.trim() : undefined,
+      bankIfscCode: bankIfscCode ? bankIfscCode.trim().toUpperCase() : undefined,
+      bankAccountHolderName: bankAccountHolderName ? bankAccountHolderName.trim() : undefined,
+      upiId: upiId ? upiId.trim() : undefined
     });
 
     await vendor.save();
@@ -208,7 +213,11 @@ exports.registerFoodVendor = async (req, res) => {
 
 exports.updateFoodVendorProfile = async (req, res) => {
   try {
-    const { name, description, avgDeliveryTime, defaultPrepTime, isNightServiceActive, serviceAreas, routes, availableHours } = req.body;
+    const { 
+      name, description, avgDeliveryTime, defaultPrepTime, isNightServiceActive, 
+      serviceAreas, routes, availableHours,
+      bankName, bankAccountNumber, bankIfscCode, bankAccountHolderName, upiId 
+    } = req.body;
     
     const updateData = {
       name,
@@ -218,7 +227,12 @@ exports.updateFoodVendorProfile = async (req, res) => {
       isNightServiceActive,
       serviceAreas,
       routes,
-      availableHours
+      availableHours,
+      bankName: bankName !== undefined ? bankName.trim() : undefined,
+      bankAccountNumber: bankAccountNumber !== undefined ? bankAccountNumber.trim() : undefined,
+      bankIfscCode: bankIfscCode !== undefined ? bankIfscCode.trim().toUpperCase() : undefined,
+      bankAccountHolderName: bankAccountHolderName !== undefined ? bankAccountHolderName.trim() : undefined,
+      upiId: upiId !== undefined ? upiId.trim() : undefined
     };
 
     // Remove undefined fields
@@ -323,7 +337,7 @@ exports.toggleFoodVendorStatus = async (req, res) => {
 
 exports.createOrder = async (req, res) => {
   try {
-    const { vendorId, items, deliveryLocation, journeyId, orderMode, targetDeliveryTime, pnrNumber } = req.body;
+    const { vendorId, items, deliveryLocation, journeyId, orderMode, targetDeliveryTime, pnrNumber, paymentMethod } = req.body;
     
     let totalAmount = 0;
     const processedItems = items.map(i => {
@@ -355,7 +369,25 @@ exports.createOrder = async (req, res) => {
       paymentStatus: 'pending'
     });
 
-    // 1. Attempt to deduct money from wallet
+    // 1. Implicitly deposit money to wallet if paid via Card/UPI (invisible checkout)
+    if (paymentMethod === 'card' || paymentMethod === 'upi') {
+      try {
+        const Wallet = require('../models/Wallet');
+        await Wallet.atomicCredit(req.user.id, totalAmount, {
+          transactionId: `FOOD_DEP_${order._id.toString()}`,
+          source: 'money_added',
+          description: `Online Payment Deposit (via ${paymentMethod.toUpperCase()})`
+        });
+      } catch (depError) {
+        console.error('Implicit deposit failed:', depError.message);
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to process online checkout payment'
+        });
+      }
+    }
+
+    // 2. Attempt to deduct money from wallet
     try {
       await walletController.deductMoney(req.user.id, totalAmount, {
         purpose: 'food_booking',

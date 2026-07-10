@@ -13,6 +13,7 @@ router.get('/profile', auth.verifyToken, auth.checkRole('vendor'), vendorControl
 router.put('/profile', auth.verifyToken, auth.checkRole('vendor'), vendorController.updateVendorProfile);
 router.get('/analytics/:vendorId', auth.verifyToken, auth.checkRole('vendor'), vendorController.getAnalytics);
 router.get('/orders/:vendorId', auth.verifyToken, auth.checkRole('vendor'), vendorController.getVendorOrders);
+router.put('/orders/:id', auth.verifyToken, auth.checkRole('vendor'), vendorController.updateVendorOrderStatus);
 router.get('/items/:vendorId', auth.verifyToken, auth.checkRole('vendor'), vendorController.getVendorItems);
 router.post('/items', auth.verifyToken, auth.checkRole('vendor'), vendorController.addVendorItem);
 

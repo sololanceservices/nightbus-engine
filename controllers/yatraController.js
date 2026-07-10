@@ -261,7 +261,7 @@ exports.getPackageDetails = async (req, res) => {
 exports.bookPackage = async (req, res) => {
   try {
     const customerId = req.user.id;
-    const { packageId, passengers, mealPreference, specialRequests } = req.body;
+    const { packageId, passengers, mealPreference, specialRequests, paymentMethod } = req.body;
 
     if (!packageId || !passengers || passengers.length === 0) {
       return res.status(400).json({ success: false, message: 'packageId and passengers are required' });
@@ -305,7 +305,22 @@ exports.bookPackage = async (req, res) => {
       paymentStatus: 'pending'
     });
 
-    // Deduct from wallet
+    // 1. Implicitly deposit money to wallet if paid via Card/UPI (invisible checkout)
+    if (paymentMethod === 'card' || paymentMethod === 'upi') {
+      try {
+        const Wallet = require('../models/Wallet');
+        await Wallet.atomicCredit(customerId, totalAmount, {
+          transactionId: `YTR_DEP_${booking._id.toString()}`,
+          source: 'money_added',
+          description: `Online Payment Deposit (via ${paymentMethod.toUpperCase()})`
+        });
+      } catch (depError) {
+        console.error('Implicit deposit failed:', depError.message);
+        return res.status(400).json({ success: false, message: 'Failed to process online checkout payment' });
+      }
+    }
+
+    // 2. Deduct from wallet
     try {
       await walletController.deductMoney(customerId, totalAmount, {
         purpose: 'yatra_booking',

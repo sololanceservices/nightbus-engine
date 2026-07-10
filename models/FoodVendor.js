@@ -64,6 +64,11 @@ const foodVendorSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  bankName: { type: String, trim: true },
+  bankAccountNumber: { type: String, trim: true },
+  bankIfscCode: { type: String, trim: true },
+  bankAccountHolderName: { type: String, trim: true },
+  upiId: { type: String, trim: true },
   performance: {
     rating: { type: Number, default: 4.5 },
     totalReviews: { type: Number, default: 0 },

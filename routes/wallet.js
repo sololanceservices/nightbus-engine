@@ -79,4 +79,11 @@ router.post(
  */
 router.post('/payout-request', walletController.requestPayout);
 
+/**
+ * @route   GET /api/wallet/payouts
+ * @desc    Get user payouts/settlements
+ * @access  Private
+ */
+router.get('/payouts', walletController.getUserPayouts);
+
 module.exports = router;

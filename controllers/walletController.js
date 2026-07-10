@@ -679,6 +679,48 @@ exports.requestPayout = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get settlements / payout requests for the logged-in user
+ * @route   GET /api/wallet/payouts
+ * @access  Private (Vendors / Owners)
+ */
+exports.getUserPayouts = async (req, res) => {
+  try {
+    const userId = req.userId || req.user?._id;
+    const Settlement = require('../models/Settlement');
+    const { status, limit = 20, page = 1 } = req.query;
+
+    const query = { ownerId: userId };
+    if (status) query.status = status;
+
+    const settlements = await Settlement.find(query)
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const total = await Settlement.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        settlements,
+        pagination: {
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('❌ [GET USER PAYOUTS ERROR]', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch payouts'
+    });
+  }
+};
+
 // Export rate limiters with controllers
 module.exports = {
   getWallet: exports.getWallet,
@@ -690,6 +732,7 @@ module.exports = {
   transferMoney: exports.transferMoney,
   getWalletStats: exports.getWalletStats,
   requestPayout: exports.requestPayout,
+  getUserPayouts: exports.getUserPayouts,
   
   // Rate limiters
   addMoneyLimiter,

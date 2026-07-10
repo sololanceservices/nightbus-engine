@@ -1,4 +1,0 @@
-[dotenv@17.2.3] injecting env (19) from .env -- tip: ≡ƒæÑ sync secrets across teammates & machines: https://dotenvx.com/ops
-serviceType: Driver
-Length: 6
-Hex: 447269766572

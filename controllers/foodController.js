@@ -238,11 +238,20 @@ exports.updateFoodVendorProfile = async (req, res) => {
     // Remove undefined fields
     Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
 
-    const vendor = await FoodVendor.findOneAndUpdate(
-      { userId: req.user.id },
-      { $set: updateData },
-      { new: true, runValidators: true }
-    );
+    let vendor = await FoodVendor.findOne({ userId: req.user.id });
+    if (!vendor) {
+      vendor = new FoodVendor({
+        userId: req.user.id,
+        ...updateData
+      });
+      await vendor.save();
+    } else {
+      vendor = await FoodVendor.findOneAndUpdate(
+        { userId: req.user.id },
+        { $set: updateData },
+        { new: true, runValidators: true }
+      );
+    }
     if (!vendor) return res.status(404).json({ success: false, message: 'Vendor not found' });
     res.status(200).json({ success: true, data: vendor });
   } catch (error) {
@@ -407,8 +416,14 @@ exports.createOrder = async (req, res) => {
     await order.save();
     
     // 3. SET AUTO-REJECTION TIMEOUT (MVP Simulation)
-    // In a real production system with worker threads, we'd use a job queue like Bull or Agenda.
-    // For this simulation, we'll mark orders as rejected if not accepted within 10 minutes.
+    let timeoutMs = 10 * 60 * 1000; // 10 minutes default
+    const isPreorder = order.orderMode === 'preorder' || 
+                      (order.targetDeliveryTime && new Date(order.targetDeliveryTime).getTime() - Date.now() > 12 * 60 * 60 * 1000);
+                      
+    if (isPreorder) {
+      timeoutMs = 12 * 60 * 60 * 1000; // 12 hours for preorders
+    }
+
     setTimeout(async () => {
       try {
         const checkOrder = await FoodOrder.findById(order._id);
@@ -428,7 +443,7 @@ exports.createOrder = async (req, res) => {
       } catch (err) {
         console.error('Auto-rejection failure:', err);
       }
-    }, 10 * 60 * 1000); // 10 minutes
+    }, timeoutMs);
 
     res.status(201).json({ success: true, data: order });
   } catch (error) {

@@ -1,6 +1,26 @@
 const Bus = require('../models/Bus');
 const Telemetry = require('../models/Telemetry');
 const aiService = require('../utils/aiService');
+const FoodOrder = require('../models/FoodOrder');
+const TripTimeline = require('../models/TripTimeline');
+
+// Haversine formula to calculate distance in km
+function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2-lat1);
+  var dLon = deg2rad(lon2-lon1); 
+  var a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  return R * c; // Distance in km
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI/180)
+}
 
 // In-memory cache for last telemetry to compare for AI analysis
 // In production, use Redis
@@ -77,6 +97,51 @@ exports.receiveTelemetry = async (req, res) => {
                 aiStatus,
                 lastUpdated: new Date()
             });
+        }
+
+        // 5. Vendor Proximity Alerts
+        try {
+            // Find active trip timeline for this bus
+            const activeJourney = await TripTimeline.findOne({ busId: bus._id, status: 'running' });
+            if (activeJourney) {
+                // Find accepted food orders for this journey that haven't had an alert sent
+                const pendingFoodOrders = await FoodOrder.find({
+                    journeyId: activeJourney._id,
+                    status: 'accepted',
+                    proximityAlertSent: false
+                }).populate('vendorId');
+
+                for (const order of pendingFoodOrders) {
+                    if (order.vendorId && order.vendorId.location && order.vendorId.location.coordinates) {
+                        const [vendorLng, vendorLat] = order.vendorId.location.coordinates;
+                        const distance = getDistanceFromLatLonInKm(lat, lng, vendorLat, vendorLng);
+                        
+                        // If within 15km, alert vendor
+                        if (distance <= 15) {
+                            console.log(`🚀 Proximity Alert! Bus ${busId} is ${Math.round(distance)}km away from Vendor ${order.vendorId._id}`);
+                            
+                            // Emit alert via Socket.io to the specific vendor's channel
+                            if (io) {
+                                io.to(`vendor-${order.vendorId._id}`).emit('vendor_proximity_alert', {
+                                    orderId: order._id,
+                                    busId: busId,
+                                    pnrNumber: order.pnrNumber,
+                                    distanceKm: Math.round(distance),
+                                    message: `The bus for Order #${order._id.toString().substring(0,6)} is approaching (approx ${Math.round(distance)} km away). Please start preparing!`
+                                });
+                            }
+                            
+                            // Mark order to prevent duplicate alerts
+                            order.proximityAlertSent = true;
+                            // Update status to preparing since the bus is close
+                            order.status = 'preparing';
+                            await order.save();
+                        }
+                    }
+                }
+            }
+        } catch (alertError) {
+            console.error('Error processing vendor proximity alerts:', alertError);
         }
 
         res.json({ success: true, message: 'Telemetry received', aiStatus });

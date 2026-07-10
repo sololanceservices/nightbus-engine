@@ -235,13 +235,23 @@ exports.updateProviderProfile = async (req, res) => {
     if (fitnessNumber !== undefined) update.fitnessNumber = fitnessNumber;
     if (insurancePolicyNumber !== undefined) update.insurancePolicyNumber = insurancePolicyNumber;
 
-    const provider = await ServiceProvider.findOneAndUpdate(
-      { userId: req.user.id },
-      update,
-      { new: true }
-    );
+    let provider = await ServiceProvider.findOne({ userId: req.user.id });
     
-    if (!provider) return res.status(404).json({ success: false, message: 'Provider profile not found' });
+    if (!provider) {
+      const user = await User.findById(req.user.id);
+      provider = new ServiceProvider({
+        userId: req.user.id,
+        serviceType: user?.serviceType || 'Other',
+        ...update
+      });
+      await provider.save();
+    } else {
+      provider = await ServiceProvider.findOneAndUpdate(
+        { userId: req.user.id },
+        update,
+        { new: true }
+      );
+    }
     
     res.json({ success: true, data: provider });
   } catch (error) {

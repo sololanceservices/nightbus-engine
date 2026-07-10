@@ -56,10 +56,14 @@ const foodOrderSchema = new mongoose.Schema({
   },
   orderMode: {
     type: String,
-    enum: ['normal', 'smart'],
+    enum: ['normal', 'smart', 'preorder'],
     default: 'normal'
   },
   targetDeliveryTime: Date, // Needed for smart mode matching
+  proximityAlertSent: {
+    type: Boolean,
+    default: false
+  },
   deliveryOtp: {
     type: String,
     length: 4 // e.g., '4928'

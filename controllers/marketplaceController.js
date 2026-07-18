@@ -119,7 +119,7 @@ exports.registerProvider = async (req, res) => {
     
     let provider = await ServiceProvider.findOne({ userId: req.user.id });
     if (provider) {
-      return res.status(400).json({ success: false, message: 'User is already registered as a provider' });
+      return res.status(400).json({ success: false, message: 'You are already registered as a service provider under this account. Please login to your provider dashboard.' });
     }
 
     // Verify Driving License for transport services (Driver / Taxi)

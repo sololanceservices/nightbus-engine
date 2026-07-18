@@ -40,7 +40,8 @@ const apiLimiter = rateLimit({
 app.use('/api/', apiLimiter);
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, {
+if (process.env.NODE_ENV !== 'test') {
+  mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
@@ -63,6 +64,7 @@ mongoose.connect(process.env.MONGODB_URI, {
     }
   })
   .catch(err => console.error('❌ MongoDB Error:', err));
+}
 
 // Socket.io - Real-time updates
 global.io = io;
@@ -156,16 +158,20 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 // Use server.listen instead of app.listen so Socket.IO works
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`
-╔════════════════════════════════════════╗
-║   🚀 Bus Booking Server Running        ║
-║   ✅ HTTP:  http://0.0.0.0:${PORT}      ║
-║   ✅ API:   http://192.168.10.5:${PORT}/api ║
-║   ✅ IO:    Socket.IO Enabled          ║
-╚════════════════════════════════════════╝
-  `);
-});
+if (require.main === module) {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`
+  ╔════════════════════════════════════════╗
+  ║   🚀 Bus Booking Server Running        ║
+  ║   ✅ HTTP:  http://0.0.0.0:${PORT}      ║
+  ║   ✅ API:   http://192.168.10.5:${PORT}/api ║
+  ║   ✅ IO:    Socket.IO Enabled          ║
+  ╚════════════════════════════════════════╝
+    `);
+  });
+}
+
+module.exports = { app, server };
 
 // Gracefully handle port-in-use error
 server.on('error', (err) => {

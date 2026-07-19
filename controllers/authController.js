@@ -36,13 +36,19 @@ exports.sendOTP = async (req, res) => {
   }
 };
 
-// Send Email OTP
 exports.sendEmailOTP = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, type } = req.body;
 
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    if (type === 'register') {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({ success: false, message: 'User with this email address is already registered' });
+      }
     }
 
     // Generate 6-digit OTP

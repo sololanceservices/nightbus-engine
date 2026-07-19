@@ -5,6 +5,7 @@ const { sendNotification } = require('../utils/notifications');
 const emailService = require('../utils/emailService');
 const otpStore = {}; // Simple in-memory OTP store
 const emailOtpStore = {}; // In-memory store for email OTPs
+const ServiceProvider = require('../models/ServiceProvider');
 
 // Generate JWT Token
 const generateToken = (id, role) => {
@@ -157,7 +158,6 @@ exports.verifyOTP = async (req, res) => {
       if (companyProfile) user.companyProfile = companyProfile;
       if (kycDetails) user.kycDetails = { ...kycDetails, isVerified: false };
 
-      // Update FCM token if provided
       if (fcmToken) {
         user.fcmToken = fcmToken;
         if (!user.fcmTokens) user.fcmTokens = [];
@@ -167,6 +167,27 @@ exports.verifyOTP = async (req, res) => {
       }
 
       await user.save();
+      
+      // Auto-create ServiceProvider profile if they don't have one and were just upgraded to provider
+      if (user.isServiceProvider) {
+        const existingProvider = await ServiceProvider.findOne({ userId: user._id });
+        if (!existingProvider) {
+          try {
+            const provider = new ServiceProvider({
+              userId: user._id,
+              serviceType: user.serviceType || 'Other',
+              businessName: user.name + ' Services',
+              description: 'Service provider profile.',
+              location: { city: 'Unknown' },
+              serviceAreas: [{ city: 'Unknown', radiusKm: 50 }]
+            });
+            await provider.save();
+          } catch (err) {
+            console.error('Failed to create ServiceProvider profile during OTP verification:', err);
+          }
+        }
+      }
+
       console.log(`✅ User verified: ${user.name} (${user.role})`);
     }
 
@@ -244,6 +265,23 @@ exports.register = async (req, res) => {
     
     if (fcmToken) user.fcmTokens = [fcmToken];
     await user.save();
+
+    // Create ServiceProvider profile if applicable
+    if (user.isServiceProvider) {
+      try {
+        const provider = new ServiceProvider({
+          userId: user._id,
+          serviceType: user.serviceType || 'Other',
+          businessName: user.name + ' Services',
+          description: 'Service provider profile.',
+          location: { city: 'Unknown' },
+          serviceAreas: [{ city: 'Unknown', radiusKm: 50 }]
+        });
+        await provider.save();
+      } catch (err) {
+        console.error('Failed to create ServiceProvider profile during registration:', err);
+      }
+    }
 
     // Cleanup store
     delete emailOtpStore[email];

@@ -15,6 +15,7 @@ const noCache = (req, res, next) => {
 router.use(noCache);
 router.get('/', auth.verifyToken, notificationController.getUserNotifications);
 router.get('/unread-count', auth.verifyToken, notificationController.getUnreadCount);
+router.get('/active-topics', auth.verifyToken, notificationController.getActiveTopics);
 router.get('/:id', auth.verifyToken, notificationController.getNotificationById);
 router.put('/:id/read', auth.verifyToken, notificationController.markAsRead);
 router.delete('/:id', auth.verifyToken, notificationController.deleteNotification);

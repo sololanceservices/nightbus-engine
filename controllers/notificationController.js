@@ -353,3 +353,52 @@ exports.bookingCancellation = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Get active topics for a user to subscribe to
+exports.getActiveTopics = async (req, res) => {
+  try {
+    const Segment = require('../models/Segment');
+    const TripTimeline = require('../models/TripTimeline');
+    
+    // Find active segments for the user (today or future)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const segments = await Segment.find({
+      customerId: req.userId,
+      travelDate: { $gte: today },
+      status: { $in: ['booked', 'confirmed', 'boarded', 'completed'] } // Keep completed briefly so they get final arrival push
+    }).select('busId travelDate routeId');
+
+    const topics = new Set();
+    
+    // Global topics
+    topics.add('all_users');
+    topics.add(`role_${req.userRole || 'customer'}`);
+
+    for (const seg of segments) {
+      if (seg.busId) {
+        topics.add(`bus_${seg.busId}`);
+      }
+      
+      // Attempt to find active trip for this route/bus/date
+      const tripDateStart = new Date(seg.travelDate);
+      tripDateStart.setHours(0,0,0,0);
+      const tripDateEnd = new Date(seg.travelDate);
+      tripDateEnd.setHours(23,59,59,999);
+
+      const trip = await TripTimeline.findOne({
+        busId: seg.busId,
+        serviceDate: { $gte: tripDateStart, $lt: tripDateEnd }
+      }).select('_id');
+      
+      if (trip) {
+        topics.add(`trip_${trip._id}`);
+      }
+    }
+
+    res.status(200).json({ success: true, topics: Array.from(topics) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

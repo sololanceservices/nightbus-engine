@@ -4,6 +4,7 @@ const User = require('../models/User');
 const TripTimeline = require('../models/TripTimeline');
 const Segment = require('../models/Segment');
 const Bus = require('../models/Bus');
+const Incident = require('../models/Incident');
 
 const resolveSegment = async (segmentIdInput) => {
   if (!segmentIdInput) return null;
@@ -390,7 +391,6 @@ exports.getActiveIncidents = async (req, res) => {
       return res.json({ success: true, incidents: [] });
     }
 
-    const Incident = require('../models/Incident');
     const incidents = await Incident.find({
       busId,
       status: { $in: ['reported', 'investigating'] }

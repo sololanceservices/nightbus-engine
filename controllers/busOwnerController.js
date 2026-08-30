@@ -1282,15 +1282,22 @@ exports.sendTripAnnouncement = async (req, res) => {
     }
 
     // 2. Find relevant passengers
-    // We target passengers who are confirmed, boarded, or in_transit
+    // We target passengers who are confirmed, boarded, or in_transit for trips today or in the future
     const targetStatuses = statusFilter || ['confirmed', 'boarded', 'in_transit', 'requested', 'pending_approval'];
+
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
     const activeSegments = await Segment.find({
       busId,
-      status: { $in: targetStatuses }
+      status: { $in: targetStatuses },
+      travelDate: { $gte: startOfToday }
     }).select('customerId');
 
-    const customerIds = [...new Set(activeSegments.map(s => s.customerId.toString()))];
+    const customerIds = [...new Set(activeSegments
+      .filter(s => s && s.customerId) // safe check
+      .map(s => s.customerId.toString())
+    )];
     
     // Send a copy to the bus owner as well so they know it worked
     if (!customerIds.includes(ownerId.toString())) {

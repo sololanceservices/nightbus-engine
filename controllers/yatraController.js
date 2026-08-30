@@ -353,29 +353,42 @@ exports.bookPackage = async (req, res) => {
  */
 exports.getMyBookings = async (req, res) => {
   try {
-    const rawUserId = req.user?._id || req.user?.id || req.userId;
     const Journey = require('../models/Journey');
+    const mongoose = require('mongoose');
 
-    const validUserIds = [rawUserId, req.userId, req.user?._id].filter(id => id);
-    if (validUserIds.length === 0) {
+    // Robustly extract userId — always cast to ObjectId to avoid string vs ObjectId mismatch
+    const rawId = req.user?._id || req.user?.id || req.userId;
+    if (!rawId) {
       return res.json({ success: true, data: [] });
     }
 
-    const customerOrConditions = validUserIds.map(id => ({ customerId: id }));
+    let userObjectId;
+    try {
+      userObjectId = new mongoose.Types.ObjectId(rawId.toString());
+    } catch (e) {
+      console.error('❌ Invalid userId format:', rawId);
+      return res.json({ success: true, data: [] });
+    }
 
-    // 1. Fetch YatraPackage bookings
+    console.log(`📋 getMyBookings called for user: ${userObjectId}`);
+
+    // 1. Fetch YatraPackage bookings — search by both ObjectId forms to be safe
     const yatraBookings = await YatraBooking.find({
-      $or: customerOrConditions
+      customerId: userObjectId
     })
-      .populate('packageId', 'title startDate endDate departurePoint category pricePerPerson status images')
+      .populate('packageId', 'title startDate endDate departurePoint category pricePerPerson status images pickupPoints')
       .sort({ createdAt: -1 });
+
+    console.log(`✅ Found ${yatraBookings.length} yatra bookings for ${userObjectId}`);
+
+
 
     // 2. Fetch Journey Yatra tickets (where isYatra === true or bookingType === 'yatra')
     let journeyYatras = [];
     try {
       journeyYatras = await Journey.find({
         $and: [
-          { $or: customerOrConditions },
+          { customerId: userObjectId },
           {
             $or: [
               { isYatra: true },
@@ -393,6 +406,7 @@ exports.getMyBookings = async (req, res) => {
     } catch (jErr) {
       console.warn('⚠️ Could not query Journey Yatra tickets:', jErr.message);
     }
+
 
     // Format Journey Yatra tickets to align with YatraBooking interface
     const formattedJourneyYatras = (journeyYatras || []).map(j => {

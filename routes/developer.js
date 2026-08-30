@@ -24,4 +24,8 @@ router.post('/change-password', developerController.changePassword);
 router.get('/health', developerController.getHealth);
 router.post('/crash-report', developerController.postCrashReport);
 
+router.post('/system-broadcast', developerController.postSystemBroadcast);
+router.get('/config/maintenance', developerController.getMaintenanceConfig);
+router.get('/terminal', developerController.getTerminalLogs);
+
 module.exports = router;

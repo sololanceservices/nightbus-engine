@@ -248,13 +248,91 @@ exports.postCrashReport = async (req, res) => {
       level: 'critical',
       message: `[MOBILE CRASH] ${error || 'Unknown Error'}`,
       source: 'mobile_app',
-      meta: {
-        stack: errorInfo,
-        deviceInfo
-      }
+      meta: { errorInfo, deviceInfo }
     });
 
     res.status(200).json({ success: true });
+  } catch (err) {
+    console.error('Crash report save failed:', err);
+    res.status(500).json({ success: false });
+  }
+};
+
+exports.postSystemBroadcast = async (req, res) => {
+  try {
+    const { title, message, type, link } = req.body;
+    const { sendTopicNotification } = require('../utils/notifications');
+    const DeveloperConfig = require('../models/DeveloperConfig');
+
+    // Handle Maintenance Toggle specifically
+    if (type === 'maintenance_break' || type === 'maintenance_off') {
+      const isMaintenance = type === 'maintenance_break';
+      await DeveloperConfig.findOneAndUpdate(
+        { key: 'maintenance_mode' },
+        { value: isMaintenance },
+        { upsert: true, new: true }
+      );
+    }
+
+    // Prepare data payload
+    const data = {
+      type: type || 'system_update',
+    };
+    if (link) data.link = link;
+
+    // Send to all users
+    await sendTopicNotification('all_users', {
+      title: title || 'System Update',
+      body: message || 'Important system update',
+      type: 'admin_msg',
+      data
+    });
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Broadcast sent successfully!' 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getMaintenanceConfig = async (req, res) => {
+  try {
+    const DeveloperConfig = require('../models/DeveloperConfig');
+    const config = await DeveloperConfig.findOne({ key: 'maintenance_mode' });
+    res.status(200).json({ 
+      success: true, 
+      maintenance_mode: config ? config.value : false 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const { exec } = require('child_process');
+
+exports.getTerminalLogs = async (req, res) => {
+  try {
+    const lines = parseInt(req.query.lines) || 100;
+    
+    // Attempt to read PM2 logs
+    exec(`pm2 logs --nostream --lines ${lines}`, (error, stdout, stderr) => {
+      if (error) {
+        // If pm2 fails, try just returning some generic system stats or a dummy log so the app doesn't break locally
+        return res.status(200).json({
+          success: true,
+          logs: `> PM2 not found or not running locally.\n> To see logs, ensure PM2 is installed.\n> Error: ${error.message}\n`
+        });
+      }
+      
+      const combinedLogs = (stdout + '\n' + stderr).trim();
+      res.status(200).json({
+        success: true,
+        logs: combinedLogs || '> No recent logs found in PM2.'
+      });
+    });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

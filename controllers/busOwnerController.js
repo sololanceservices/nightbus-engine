@@ -1283,22 +1283,23 @@ exports.sendTripAnnouncement = async (req, res) => {
 
     // 2. Find relevant passengers
     // We target passengers who are confirmed, boarded, or in_transit
-    const targetStatuses = statusFilter || ['confirmed', 'boarded', 'in_transit'];
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const targetStatuses = statusFilter || ['confirmed', 'boarded', 'in_transit', 'requested', 'pending_approval'];
 
     const activeSegments = await Segment.find({
       busId,
-      travelDate: { $gte: today, $lt: tomorrow },
       status: { $in: targetStatuses }
     }).select('customerId');
 
     const customerIds = [...new Set(activeSegments.map(s => s.customerId.toString()))];
     
-    if (customerIds.length === 0) {
-      return res.status(200).json({ success: true, message: 'No active passengers found for this trip', count: 0 });
+    // Send a copy to the bus owner as well so they know it worked
+    if (!customerIds.includes(ownerId.toString())) {
+      customerIds.push(ownerId.toString());
+    }
+    
+    if (customerIds.length === 1 && customerIds[0] === ownerId.toString()) {
+      // We can still send it to the owner even if there are no passengers, for testing
+      console.log(`📢 Sending announcement to bus owner (no active passengers)`);
     }
 
     console.log(`📢 Sending announcement to ${customerIds.length} passengers of bus ${bus.busName}`);

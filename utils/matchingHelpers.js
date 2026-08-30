@@ -3,9 +3,9 @@
  */
 
 const getMatchingConfig = () => {
-  const minFillRatio = parseFloat(process.env.MATCHING_MIN_FILL_RATIO) || 0.60;
-  const minCapacityRatio = parseFloat(process.env.MATCHING_MIN_CAPACITY_RATIO) || 0.85;
-  const priceTolerancePct = parseFloat(process.env.MATCHING_PRICE_TOLERANCE_PCT) || 0.15;
+  const minFillRatio = parseFloat(process.env.MATCHING_MIN_FILL_RATIO) || 0.40;
+  const minCapacityRatio = parseFloat(process.env.MATCHING_MIN_CAPACITY_RATIO) || 0.30;
+  const priceTolerancePct = parseFloat(process.env.MATCHING_PRICE_TOLERANCE_PCT) || 0.30;
 
   return {
     minFillRatio,

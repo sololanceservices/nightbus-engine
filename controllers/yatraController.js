@@ -387,7 +387,7 @@ exports.getMyBookings = async (req, res) => {
       })
         .populate({
           path: 'segments',
-          populate: { path: 'busId routeId' }
+          populate: [{ path: 'busId' }, { path: 'routeId' }]
         })
         .sort({ createdAt: -1 });
     } catch (jErr) {

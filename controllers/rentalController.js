@@ -434,10 +434,21 @@ exports.getOwnerLeads = async (req, res) => {
   try {
     const { status = 'new' } = req.query;
     
-    const leads = await RentalMatch.find({ 
-      ownerId: req.user.id,
-      status: status === 'all' ? { $exists: true } : status
-    })
+    const query = { ownerId: req.user.id };
+    
+    if (status === 'all') {
+      query.status = { $exists: true };
+    } else {
+      query.status = status;
+      // If fetching 'new' leads, only show ones created in the last 48 hours
+      if (status === 'new') {
+        const twoDaysAgo = new Date();
+        twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+        query.createdAt = { $gte: twoDaysAgo };
+      }
+    }
+
+    const leads = await RentalMatch.find(query)
     .populate({
       path: 'requestId',
       populate: { path: 'userId', select: 'name phone' }

@@ -464,8 +464,9 @@ exports.updateRoute = async (req, res) => {
       });
     }
 
-    if (updates.departureTime && existingRoute.stops && existingRoute.stops.length > 0) {
-      const updatedStops = existingRoute.stops.map((s, idx) => {
+    let stopsToUpdate = updates.stops || existingRoute.stops;
+    if (updates.departureTime && stopsToUpdate && stopsToUpdate.length > 0) {
+      const updatedStops = stopsToUpdate.map((s, idx) => {
         const stopObj = s.toObject ? s.toObject() : { ...s };
         if (idx === 0) {
           stopObj.departureTime = updates.departureTime;
@@ -473,6 +474,23 @@ exports.updateRoute = async (req, res) => {
         return stopObj;
       });
       updates.stops = updatedStops;
+    }
+
+    if (updates.stops && updates.stops.length >= 2) {
+      const firstStop = updates.stops[0];
+      const lastStop = updates.stops[updates.stops.length - 1];
+
+      updates.fromLocation = {
+        name: firstStop.name,
+        village: firstStop.village,
+        district: firstStop.district
+      };
+
+      updates.toLocation = {
+        name: lastStop.name,
+        village: lastStop.village,
+        district: lastStop.district
+      };
     }
 
     const route = await Route.findOneAndUpdate(
@@ -595,6 +613,9 @@ exports.getBusRoutes = async (req, res) => {
   try {
     const { busId } = req.params;
     const ownerId = req.userId;
+    if (!busId || busId === 'undefined' || !mongoose.Types.ObjectId.isValid(busId)) {
+      return res.json({ success: true, data: { routes: [] } });
+    }
 
     const routes = await Route.find({ busId, ownerId });
     res.json({ success: true, data: { routes } });

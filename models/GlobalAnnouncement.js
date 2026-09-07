@@ -13,7 +13,7 @@ const globalAnnouncementSchema = new mongoose.Schema({
   },
   targetRoles: {
     type: [String],
-    enum: ['customer', 'owner', 'staff', 'vendor', 'admin', 'all'],
+    enum: ['customer', 'owner', 'staff', 'vendor', 'admin', 'provider', 'all'],
     default: ['all']
   },
   priority: {

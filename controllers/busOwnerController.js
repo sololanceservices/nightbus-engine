@@ -48,7 +48,8 @@ exports.updateOwnerSettings = async (req, res) => {
       user.ownerSettings = {};
     }
 
-    user.ownerSettings.autoConfirmBookings = autoConfirmBookings;
+    user.set('ownerSettings.autoConfirmBookings', Boolean(autoConfirmBookings));
+    user.markModified('ownerSettings');
     await user.save();
 
     res.json({
@@ -669,7 +670,6 @@ exports.getPendingApprovals = async (req, res) => {
 
     if (status === 'pending') {
       query.status = { $in: ['requested', 'pending_approval'] };
-      query.approvalStatus = 'pending';
     } else if (status === 'confirmed') {
       query.status = { $in: ['confirmed', 'boarded', 'in_transit', 'completed'] };
     } else if (status === 'rejected') {
@@ -1296,11 +1296,23 @@ exports.sendTripAnnouncement = async (req, res) => {
     const { busId, title, body, statusFilter } = req.body;
     const ownerId = req.userId;
 
-    // 1. Verify bus belongs to owner
-    const bus = await Bus.findOne({ _id: busId, ownerId });
-    if (!bus) {
-      return res.status(404).json({ success: false, message: 'Bus not found or unauthorized' });
+    let buses = [];
+    if (busId) {
+      // 1. Verify specific bus belongs to owner
+      const bus = await Bus.findOne({ _id: busId, ownerId });
+      if (!bus) {
+        return res.status(404).json({ success: false, message: 'Bus not found or unauthorized' });
+      }
+      buses.push(bus);
+    } else {
+      // 1. Get all buses for this owner
+      buses = await Bus.find({ ownerId });
+      if (buses.length === 0) {
+        return res.status(404).json({ success: false, message: 'No buses found for this owner' });
+      }
     }
+
+    const busIds = buses.map(b => b._id);
 
     // 2. Find relevant passengers
     // We target passengers who are confirmed, boarded, or in_transit for trips today or in the future
@@ -1310,10 +1322,10 @@ exports.sendTripAnnouncement = async (req, res) => {
     startOfToday.setHours(0, 0, 0, 0);
 
     const activeSegments = await Segment.find({
-      busId,
+      busId: { $in: busIds },
       status: { $in: targetStatuses },
       travelDate: { $gte: startOfToday }
-    }).select('customerId');
+    }).select('customerId busId');
 
     const customerIds = [...new Set(activeSegments
       .filter(s => s && s.customerId) // safe check
@@ -1330,18 +1342,17 @@ exports.sendTripAnnouncement = async (req, res) => {
       console.log(`📢 Sending announcement to bus owner (no active passengers)`);
     }
 
-    console.log(`📢 Sending announcement to ${customerIds.length} passengers of bus ${bus.busName}`);
+    console.log(`📢 Sending announcement to ${customerIds.length} passengers across ${buses.length} buses`);
 
     // 3. Send notifications in parallel
     const notificationPromises = customerIds.map(customerId => 
       sendNotification(customerId, {
-        title: title || `Announcement from ${bus.busName || 'Bus Owner'}`,
+        title: title || 'Announcement from Bus Owner',
         body: body || req.body.message || 'New update regarding your trip',
-        type: 'bus_announcement',
+        type: req.body.type || 'bus_announcement',
         data: {
-          busId,
-          busName: bus.busName,
-          category: 'trip_update'
+          category: 'trip_update',
+          ownerId: ownerId.toString()
         }
       })
     );

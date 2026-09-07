@@ -663,6 +663,8 @@ exports.getPendingApprovals = async (req, res) => {
 
     const buses = await Bus.find({ ownerId }, '_id');
     const busIds = buses.map(b => b._id);
+    
+    console.log(`[DEBUG getPendingApprovals] ownerId: ${ownerId}, found buses: ${busIds.length}`);
 
     let query = {
       busId: { $in: busIds }
@@ -675,12 +677,19 @@ exports.getPendingApprovals = async (req, res) => {
     } else if (status === 'rejected') {
       query.status = 'rejected';
     }
+    
+    console.log(`[DEBUG getPendingApprovals] query: ${JSON.stringify(query)}`);
+
+    const allOwnerSegments = await Segment.find({ busId: { $in: busIds } }).select('_id status');
+    console.log(`[DEBUG getPendingApprovals] allOwnerSegments (any status): ${JSON.stringify(allOwnerSegments)}`);
 
     const segments = await Segment.find(query)
       .populate('customerId', 'name phone')
       .populate('busId', 'chassisNumber busType busNumber')
       .populate('routeId', 'routeName')
       .sort('-createdAt');
+
+    console.log(`[DEBUG getPendingApprovals] Returning ${segments.length} segments`);
 
     res.json({
       success: true,

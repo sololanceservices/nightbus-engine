@@ -82,6 +82,12 @@ exports.createBus = async (req, res) => {
     const busData = { ...req.body, ownerId };
 
     const bus = new Bus(busData);
+    
+    // Generate default seat configuration if not provided by frontend
+    if (!bus.seatConfiguration || bus.seatConfiguration.length === 0) {
+      bus.seatConfiguration = bus.generateSeatConfiguration();
+    }
+    
     await bus.save();
 
     res.status(201).json({

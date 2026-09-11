@@ -305,17 +305,34 @@ exports.bookPackage = async (req, res) => {
       paymentStatus: 'pending'
     });
 
-    // 1. Implicitly deposit money to wallet if paid via Card/UPI (invisible checkout)
-    if (paymentMethod === 'card' || paymentMethod === 'upi') {
+    // 1. Implicitly deposit money to wallet if paid via Card/UPI/Razorpay (verified checkout)
+    if (paymentMethod === 'card' || paymentMethod === 'upi' || paymentMethod === 'razorpay') {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(400).json({ success: false, message: 'Missing Razorpay signature details' });
+      }
+
       try {
+        const crypto = require('crypto');
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+                                        .update(body.toString())
+                                        .digest('hex');
+
+        if (expectedSignature !== razorpay_signature) {
+          return res.status(400).json({ success: false, message: 'Invalid payment signature from Razorpay' });
+        }
+
+        // Signature is valid. Deposit the funds into the internal wallet implicitly so the ledger balances.
         const Wallet = require('../models/Wallet');
         await Wallet.atomicCredit(customerId, totalAmount, {
           transactionId: `YTR_DEP_${booking._id.toString()}`,
           source: 'money_added',
-          description: `Online Payment Deposit (via ${paymentMethod.toUpperCase()})`
+          description: `Online Payment Deposit (via Razorpay ${razorpay_payment_id})`
         });
       } catch (depError) {
-        console.error('Implicit deposit failed:', depError.message);
+        console.error('Implicit deposit/verification failed:', depError.message);
         return res.status(400).json({ success: false, message: 'Failed to process online checkout payment' });
       }
     }

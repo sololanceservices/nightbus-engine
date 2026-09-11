@@ -316,7 +316,7 @@ exports.updateTripStatus = async (req, res) => {
         let notificationBody = `Trip status updated to ${status}`;
         if (status === 'boarding') notificationBody = "Boarding has started! Please be at the stop with your QR code.";
         if (status === 'running') notificationBody = "The bus has started its journey.";
-        if (status === 'completed') notificationBody = "Journey completed. Thank you for traveling with Basondra!";
+        if (status === 'completed') notificationBody = "Journey completed. Thank you for traveling with Night Bus!";
 
         sendTopicNotification(topic, {
             title: status.toUpperCase() + ' Status',

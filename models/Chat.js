@@ -82,26 +82,28 @@ chatSchema.index(
 const Chat = mongoose.model('Chat', chatSchema);
 
 // Async database index cleanup & data migration
-setTimeout(async () => {
-  try {
-    // 1. Drop the old unique multikey index that causes collisions
-    await Chat.collection.dropIndex('participants_1_contextType_1_contextId_1').catch(() => {
-      // Ignore if index doesn't exist
-    });
+if (process.env.NODE_ENV !== 'test') {
+  setTimeout(async () => {
+    try {
+      // 1. Drop the old unique multikey index that causes collisions
+      await Chat.collection.dropIndex('participants_1_contextType_1_contextId_1').catch(() => {
+        // Ignore if index doesn't exist
+      });
 
-    // 2. Migrate existing chats to populate participantsHash
-    const chats = await Chat.find({ participantsHash: { $exists: false } });
-    if (chats.length > 0) {
-      console.log(`🧹 Migrating ${chats.length} chats to add participantsHash...`);
-      for (const chat of chats) {
-        const hash = chat.participants.map(p => p.toString()).sort().join('_');
-        await Chat.updateOne({ _id: chat._id }, { $set: { participantsHash: hash } });
+      // 2. Migrate existing chats to populate participantsHash
+      const chats = await Chat.find({ participantsHash: { $exists: false } });
+      if (chats.length > 0) {
+        console.log(`🧹 Migrating ${chats.length} chats to add participantsHash...`);
+        for (const chat of chats) {
+          const hash = chat.participants.map(p => p.toString()).sort().join('_');
+          await Chat.updateOne({ _id: chat._id }, { $set: { participantsHash: hash } });
+        }
+        console.log('✅ Chat migration completed.');
       }
-      console.log('✅ Chat migration completed.');
+    } catch (err) {
+      console.error('⚠️ Chat collection migration error:', err.message);
     }
-  } catch (err) {
-    console.error('⚠️ Chat collection migration error:', err.message);
-  }
-}, 2000);
+  }, 2000);
+}
 
 module.exports = Chat;

@@ -46,7 +46,8 @@ exports.createOrder = async (req, res) => {
       order: order,
       order_id: order.id,
       amount: order.amount,
-      currency: order.currency
+      currency: order.currency,
+      razorpayKeyId: process.env.RAZORPAY_KEY_ID
     });
   } catch (error) {
     console.error('[CREATE ORDER ERROR]', error);
